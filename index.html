@@ -1,0 +1,2820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Versewright — Bible Typing</title>
+<!-- a versal V in gold leaf over a red rubric rule: the two inks of an
+     illuminated page, and the only mark that still reads at 16px -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E %3Crect width='32' height='32' rx='5' fill='%2317120e'/%3E %3Cg fill='%23c6a14b'%3E %3Cpath d='M9.1 6.9 h5.2 l2.0 12.6 l3.4 -12.6 h2.7 l-5.2 16.5 h-2.1 z'/%3E %3Crect x='7.6' y='5.4' width='8.2' height='1.6' rx='.4'/%3E %3Crect x='18.5' y='5.4' width='5.9' height='1.6' rx='.4'/%3E %3C/g%3E %3Crect x='8.4' y='25.4' width='15.2' height='1.9' rx='.95' fill='%23c8402e'/%3E %3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Lora:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --leather:#17120e;
+    --raised:#211a14;
+    --line:#352a1f;
+    --faint:#6b5f50;      /* untyped ink */
+    --paper:#ede4d1;      /* typed ink */
+    --gilt:#c6a14b;       /* gold leaf */
+    --gilt-dim:#8a7340;
+    --red:#c8402e;        /* red-letter */
+    --mut:#93857a;
+    --serif-display:'Cormorant Garamond', Georgia, serif;
+    --serif-read:'Lora', Georgia, serif;
+    --mono:'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  /* an author display rule outranks the UA sheet's [hidden]{display:none} no
+     matter the specificity, so anything given display here (.scribeline,
+     .startoggle) would ignore the hidden attribute without this */
+  [hidden]{display:none !important}
+  html,body{height:100%}
+  body{
+    background:var(--leather);
+    color:var(--paper);
+    font-family:var(--mono);
+    display:flex;flex-direction:column;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  /* gilded page edge */
+  .gilt-edge{height:3px;background:linear-gradient(90deg,transparent 0%,var(--gilt-dim) 12%,var(--gilt) 50%,var(--gilt-dim) 88%,transparent 100%);flex:none}
+
+  header{
+    display:flex;align-items:baseline;justify-content:space-between;gap:1rem;
+    padding:1.1rem 2rem .6rem;flex-wrap:wrap;
+  }
+  .masthead{font-family:var(--serif-display);font-weight:600;font-size:1.5rem;letter-spacing:.06em;color:var(--gilt)}
+  .masthead .amp{color:var(--faint);font-style:italic;font-weight:500;font-size:1rem;letter-spacing:.02em;margin-left:.55rem}
+
+  /* ---------- control bar ---------- */
+  .bar{
+    display:flex;align-items:center;justify-content:center;gap:.4rem;flex-wrap:wrap;
+    padding:.4rem 1rem .9rem;font-size:.72rem;color:var(--mut);
+  }
+  .bar .grp{display:flex;align-items:center;gap:.1rem;background:var(--raised);border:1px solid var(--line);border-radius:6px;padding:.2rem .3rem}
+  .bar button, .bar select, .bar input{
+    font:inherit;color:var(--mut);background:none;border:none;cursor:pointer;
+    padding:.28rem .55rem;border-radius:4px;
+  }
+  .bar button:hover{color:var(--paper)}
+  .bar button.on{color:var(--gilt)}
+  #pinsBtn .cnt{color:var(--gilt-dim)}
+  .bar button:disabled,.bar button:disabled:hover{color:var(--line);cursor:default}
+  .navgrp button{font-size:.9rem;line-height:1;padding:.18rem .5rem}
+  .bar button:focus-visible, .bar select:focus-visible, .bar input:focus-visible,
+  .rbtn:focus-visible, .pinrow button:focus-visible,
+  .pinbtn:focus-visible, .starbtn:focus-visible{outline:1px solid var(--gilt);outline-offset:2px}
+  .bar select{appearance:none;-webkit-appearance:none;padding-right:1.1rem;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='5'%3E%3Cpath d='M0 0l3.5 5L7 0z' fill='%236b5f50'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right .35rem center}
+  .bar select:hover{color:var(--paper)}
+  .sep{width:1px;height:1rem;background:var(--line);margin:0 .15rem}
+  #refWrap{display:none;position:relative}
+  #refWrap.show{display:flex}
+  /* pinned rather than left to size itself: the option labels are short, but a
+     select grows to fit its widest optgroup label too, which shifted the whole
+     bar sideways */
+  #translation{width:5.4rem}
+  #refInput{width:15rem;color:var(--paper);cursor:text}
+  /* ---------- passage suggestions ----------
+     one popover doing three jobs: confirming a reference it understood, mending
+     a misspelling, or offering the books a half-typed name could still be */
+  .suggest{
+    position:absolute;top:calc(100% + .45rem);left:0;min-width:100%;z-index:30;
+    background:var(--raised);border:1px solid var(--line);border-radius:7px;
+    padding:.25rem;box-shadow:0 10px 28px rgba(0,0,0,.5);
+    max-height:15rem;overflow-y:auto;
+  }
+  .suggest .row{
+    display:flex;align-items:baseline;gap:1rem;width:100%;text-align:left;
+    font:inherit;font-size:.72rem;color:var(--paper);background:none;border:none;
+    cursor:pointer;padding:.36rem .55rem;border-radius:4px;white-space:nowrap;
+  }
+  .suggest .row .h{margin-left:auto;font-size:.58rem;color:var(--faint);letter-spacing:.1em;text-transform:uppercase}
+  .suggest .row:hover,.suggest .row.sel{background:#2c2219}
+  .suggest .row:hover .n,.suggest .row.sel .n{color:var(--gilt)}
+  .suggest .row.fix .h{color:var(--gilt-dim)}
+  .suggest .note{font-size:.66rem;color:var(--faint);padding:.4rem .55rem;line-height:1.55;white-space:normal}
+  .suggest .note b{color:var(--paper);font-weight:400}
+  #refInput::placeholder{color:var(--faint)}
+
+  /* ---------- stage ---------- */
+  main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 max(1.2rem, 4vw) 4rem;width:100%}
+  .stage{width:min(95rem,100%);position:relative}
+
+  .refline{
+    font-family:var(--serif-display);font-style:italic;font-size:1.15rem;color:var(--gilt);
+    margin-bottom:1.4rem;min-height:1.6rem;display:flex;align-items:baseline;gap:.8rem;flex-wrap:wrap;
+  }
+  .refline .tr{font-family:var(--mono);font-style:normal;font-size:.65rem;color:var(--faint);letter-spacing:.12em;text-transform:uppercase}
+  .refline .vod{color:var(--gilt-dim)}
+  .refline .backtag{color:var(--mut)}
+  .pinbtn{font-family:var(--mono);font-style:normal;font-size:.65rem;background:none;border:none;color:var(--faint);cursor:pointer;letter-spacing:.05em;padding:.1rem .2rem}
+  .pinbtn:hover{color:var(--gilt)}
+  .pinbtn.pinned{color:var(--gilt)}
+  .starbtn{font-family:var(--mono);font-style:normal;font-size:.8rem;line-height:1;background:none;border:none;color:var(--faint);cursor:pointer;padding:.1rem .2rem}
+  .starbtn:hover{color:var(--gilt)}
+  .starbtn.on{color:var(--gilt)}
+
+  /* ---------- scribe progress ---------- */
+  .scribeline{
+    display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;
+    margin:-.7rem 0 1.1rem;font-size:.6rem;color:var(--faint);
+    letter-spacing:.12em;text-transform:uppercase;
+  }
+  .sprog{flex:none;width:min(18rem,42vw);height:2px;background:var(--line);border-radius:1px;overflow:hidden}
+  .sprog i{display:block;height:100%;background:var(--gilt);width:0;transition:width .3s ease}
+  .scribeline .pos{color:var(--gilt-dim)}
+
+  .textwrap{position:relative;overflow:hidden;cursor:text}
+  #text{
+    font-family:var(--serif-read);
+    font-size:clamp(1.25rem, 0.8rem + 1.15vw, 2.25rem);line-height:1.62em;
+    color:var(--faint);position:relative;
+    transition:transform .18s ease;
+    word-break:normal;
+  }
+  .word{display:inline}
+  .ch{transition:color .05s linear}
+  .ch.ok{color:var(--paper)}
+  .ch.bad{color:var(--red);text-decoration:underline;text-decoration-color:var(--red);text-decoration-thickness:1px;text-underline-offset:6px}
+  .vn{
+    font-family:var(--mono);font-size:.62em;color:var(--gilt-dim);
+    vertical-align:.55em;margin-right:.35em;letter-spacing:0;user-select:none;
+    line-height:0; /* keep raised superscripts from inflating the line box, so every line lands on the grid */
+  }
+  #caret{
+    position:absolute;width:2px;border-radius:1px;background:var(--gilt);
+    transition:left .08s ease, top .12s ease;
+    animation:blink 1.1s step-end infinite;
+  }
+  @keyframes blink{50%{opacity:0}}
+  #caret.moving{animation:none;opacity:1}
+
+  .veil{
+    position:absolute;inset:-1rem;display:none;align-items:center;justify-content:center;
+    backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+    background:rgba(23,18,14,.55);z-index:5;
+    font-size:.75rem;color:var(--mut);letter-spacing:.08em;cursor:pointer;
+  }
+  .veil.show{display:flex}
+
+  /* ---------- your own text ---------- */
+  .custom{display:none;max-width:44rem}
+  .custom.show{display:block}
+  .custom h2{font-family:var(--serif-display);font-weight:600;font-size:1.3rem;color:var(--gilt);margin-bottom:.3rem}
+  .custom .sub{font-size:.7rem;color:var(--faint);line-height:1.7;margin-bottom:1.1rem;max-width:34rem}
+  .custom input, .custom textarea{
+    width:100%;font:inherit;color:var(--paper);
+    background:var(--raised);border:1px solid var(--line);border-radius:7px;
+    padding:.6rem .7rem;
+  }
+  .custom input{font-size:.78rem;margin-bottom:.5rem}
+  /* the serif face the passage itself is set in, so what is typed here looks
+     like what will be typed out there */
+  .custom textarea{
+    font-family:var(--serif-read);font-size:1rem;line-height:1.7;resize:vertical;
+    min-height:8rem;
+  }
+  .custom input::placeholder, .custom textarea::placeholder{color:var(--faint)}
+  .custom input:focus-visible, .custom textarea:focus-visible{outline:1px solid var(--gilt);outline-offset:1px}
+  .crow{display:flex;align-items:center;gap:.6rem;margin-top:.7rem;flex-wrap:wrap}
+  .ccount{font-size:.62rem;color:var(--faint);letter-spacing:.08em}
+  .ccount.over{color:var(--red)}
+
+  .notice{font-size:.78rem;color:var(--mut);line-height:1.7}
+  .notice em{color:var(--red);font-style:normal}
+  .notice .hint{color:var(--faint);display:block;margin-top:.5rem}
+
+  /* ---------- results ---------- */
+  .results{display:none;text-align:left}
+  .results.show{display:block}
+  .bigwpm{font-family:var(--serif-display);font-weight:500;font-size:5.5rem;line-height:1;color:var(--gilt)}
+  .bigwpm small{font-family:var(--mono);font-size:.8rem;color:var(--faint);letter-spacing:.15em;margin-left:.6rem}
+  .pbtag{display:inline-block;font-size:.62rem;letter-spacing:.15em;color:var(--leather);background:var(--gilt);border-radius:3px;padding:.15rem .5rem;vertical-align:.5rem;margin-left:.8rem}
+  .rref{font-family:var(--serif-display);font-style:italic;font-size:1.2rem;color:var(--paper);margin:.9rem 0 1.2rem}
+  .rstats{display:flex;gap:2.2rem;font-size:.72rem;color:var(--mut);flex-wrap:wrap}
+  .rstats b{display:block;font-size:1.05rem;color:var(--paper);font-weight:500;margin-top:.2rem}
+  .ractions{margin-top:1.8rem;display:flex;gap:.6rem;flex-wrap:wrap}
+  .rbtn{font:inherit;font-size:.72rem;color:var(--paper);background:var(--raised);border:1px solid var(--line);border-radius:6px;padding:.5rem .9rem;cursor:pointer}
+  .rbtn:hover{border-color:var(--gilt-dim);color:var(--gilt)}
+  .rbtn.on{color:var(--gilt);border-color:var(--gilt-dim)}
+  .rbtn kbd{color:var(--faint);margin-left:.45rem;font-size:.62rem}
+  .rhist{margin-top:2.2rem;border-top:1px solid var(--line);padding-top:1rem;font-size:.68rem;color:var(--faint)}
+  .rhist h3{font-size:.62rem;font-weight:400;letter-spacing:.18em;color:var(--gilt-dim);margin-bottom:.6rem}
+  .rhist .row{display:flex;gap:1.2rem;padding:.18rem 0}
+  .rhist .row .w{width:4.5rem;color:var(--paper)}
+  .rhist .row .a{width:4rem}
+
+  /* ---------- pins drawer ---------- */
+  .drawer{
+    position:fixed;top:0;right:0;bottom:0;width:min(23rem,92vw);z-index:20;
+    background:var(--raised);border-left:1px solid var(--line);
+    transform:translateX(100%);transition:transform .22s ease;
+    padding:1.4rem 1.2rem;overflow-y:auto;
+  }
+  .drawer.open{transform:none}
+  .drawer .tabs{display:flex;gap:.1rem;margin:.6rem 0 1.1rem;border-bottom:1px solid var(--line)}
+  .drawer .tabs button{
+    font:inherit;font-size:.6rem;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--faint);background:none;border:none;cursor:pointer;
+    padding:.35rem .4rem;margin-bottom:-1px;border-bottom:1px solid transparent;
+  }
+  .drawer .tabs button:hover{color:var(--paper)}
+  .drawer .tabs button[aria-selected="true"]{color:var(--gilt);border-bottom-color:var(--gilt)}
+  .drawer .tabs button:focus-visible{outline:1px solid var(--gilt);outline-offset:1px}
+  .pane:focus{outline:none}
+  /* the first block in a pane carries the tab strip's spacing already */
+  .pane > .dsec:first-child{margin-top:0;border-top:none;padding-top:0}
+  .drawer h2{font-family:var(--serif-display);font-weight:600;font-size:1.15rem;color:var(--gilt);margin-bottom:.2rem}
+  .drawer .sub{font-size:.65rem;color:var(--faint);margin-bottom:1.2rem;line-height:1.6}
+  #pinSearch{
+    width:100%;font:inherit;font-size:.72rem;color:var(--paper);
+    background:var(--leather);border:1px solid var(--line);border-radius:6px;
+    padding:.45rem .6rem;margin-bottom:.35rem;
+  }
+  #pinSearch::placeholder{color:var(--faint)}
+  #pinSearch:focus-visible{outline:1px solid var(--gilt);outline-offset:1px}
+  .pmatch{font-size:.6rem;color:var(--faint);letter-spacing:.08em;margin:.15rem 0 .35rem}
+  .pinrow{display:flex;align-items:center;gap:.5rem;padding:.45rem 0;border-bottom:1px solid var(--line);font-size:.72rem}
+  .pinrow .pr{flex:1;background:none;border:none;font:inherit;color:var(--paper);text-align:left;cursor:pointer;padding:.2rem 0}
+  .pinrow .pr:hover{color:var(--gilt)}
+  .pinrow .pr small{display:block;color:var(--faint);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;margin-top:.15rem}
+  .pinrow .del{background:none;border:none;color:var(--faint);cursor:pointer;font:inherit;padding:.2rem .3rem}
+  .pinrow .del:hover{color:var(--red)}
+  .pinrow .star{background:none;border:none;color:#5c5042;cursor:pointer;font:inherit;font-size:.85rem;line-height:1;padding:.2rem .1rem;flex:none}
+  .pinrow .star:hover{color:var(--gilt-dim)}
+  .pinrow .star.on,.pinrow .star.on:hover{color:var(--gilt)}
+  .pgroup{font-size:.58rem;letter-spacing:.18em;color:var(--gilt-dim);margin:1rem 0 .1rem}
+  .pgroup:first-child{margin-top:.1rem}
+  .startoggle{
+    display:flex;align-items:center;gap:.5rem;width:100%;text-align:left;
+    font:inherit;font-size:.65rem;color:var(--mut);background:none;border:none;
+    cursor:pointer;padding:.25rem 0;margin:0 0 .6rem;line-height:1.5;
+  }
+  .startoggle:hover{color:var(--paper)}
+  .startoggle.on{color:var(--gilt)}
+  .startoggle .box{
+    width:.85rem;height:.85rem;flex:none;border:1px solid var(--line);border-radius:3px;
+    display:flex;align-items:center;justify-content:center;font-size:.55rem;color:transparent;
+  }
+  .startoggle.on .box{background:var(--gilt);border-color:var(--gilt);color:var(--leather)}
+  .drawer .empty{font-size:.7rem;color:var(--faint);line-height:1.7}
+  .drawer .close{position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--faint);font:inherit;cursor:pointer;font-size:.9rem}
+  .drawer .close:hover{color:var(--paper)}
+  .dsec{margin-top:1.8rem;border-top:1px solid var(--line);padding-top:1rem}
+  .dsec h3{font-size:.62rem;font-weight:400;letter-spacing:.18em;color:var(--gilt-dim);margin-bottom:.5rem}
+  .dsec select, .pane select{
+    width:100%;font:inherit;font-size:.72rem;color:var(--paper);cursor:pointer;
+    background:var(--leather);border:1px solid var(--line);border-radius:6px;padding:.45rem .6rem;
+    appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='5'%3E%3Cpath d='M0 0l3.5 5L7 0z' fill='%236b5f50'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right .6rem center;
+  }
+  .dsec select:focus-visible, .pane select:focus-visible{outline:1px solid var(--gilt);outline-offset:1px}
+  .spos{font-size:.75rem;color:var(--paper);margin-bottom:.35rem}
+  .spct{font-size:.6rem;color:var(--faint);letter-spacing:.1em;margin-bottom:.5rem}
+  .drow{display:flex;gap:.5rem;flex-wrap:wrap}
+  .dmsg{font-size:.65rem;color:var(--mut);margin-top:.7rem;line-height:1.6;min-height:1em}
+  .krow{margin-bottom:1.4rem}
+  .krow label{display:block;font-size:.66rem;letter-spacing:.12em;color:var(--gilt-dim);margin-bottom:.35rem;text-transform:uppercase}
+  .kset{color:var(--gilt);letter-spacing:.08em}
+  .krow label a{color:var(--gilt-dim);text-decoration:none}
+  .krow label a:hover{color:var(--gilt)}
+  .krow input{
+    width:100%;font:inherit;font-size:.72rem;color:var(--paper);
+    background:var(--leather);border:1px solid var(--line);border-radius:6px;
+    padding:.45rem .6rem;letter-spacing:.06em;
+  }
+  .krow input::placeholder{color:var(--faint);letter-spacing:0}
+  .krow input:focus-visible{outline:1px solid var(--gilt);outline-offset:1px}
+  .kmsg{font-size:.6rem;color:var(--mut);margin-top:.3rem;line-height:1.5;min-height:1em}
+
+  /* ---------- plain-language help ----------
+     the explaining copy runs a size larger and a shade brighter than the usual
+     drawer caption. Someone who has never met an API key is reading this to
+     learn something, not skimming a label they already understand. */
+  .plain{font-size:.7rem;line-height:1.75;color:var(--mut);margin-bottom:1.1rem}
+  .plain p + p{margin-top:.6rem}
+  .plain b{color:var(--paper);font-weight:400}
+  .how{margin-top:.5rem}
+  .how summary{
+    font-size:.66rem;letter-spacing:.05em;color:var(--gilt-dim);cursor:pointer;
+    padding:.3rem 0;list-style:none;
+  }
+  .how summary::-webkit-details-marker{display:none}
+  /* the caret marks this as a disclosure rather than a link that went nowhere.
+     A non-breaking space, because a trailing one in generated content collapses
+     and leaves the arrow jammed against the word */
+  .how summary::before{content:'▸\00a0'}
+  .how[open] summary::before{content:'▾\00a0'}
+  .how summary:hover{color:var(--gilt)}
+  .how summary:focus-visible{outline:1px solid var(--gilt);outline-offset:2px;border-radius:3px}
+  .steps{
+    list-style:decimal;padding:.4rem 0 .2rem 1.5rem;margin:0;
+    font-size:.68rem;line-height:1.75;color:var(--mut);
+  }
+  .steps li{margin-bottom:.6rem;padding-left:.15rem}
+  .steps li::marker{color:var(--gilt-dim)}
+  .steps b{color:var(--paper);font-weight:400}
+  .steps a, .plain a{color:var(--gilt-dim);text-decoration:none;border-bottom:1px solid var(--line)}
+  .steps a:hover, .plain a:hover{color:var(--gilt);border-bottom-color:var(--gilt-dim)}
+  /* the key as Crossway actually presents it, with the half to discard set back
+     and the half to copy brought forward — quicker to grasp than the sentence
+     underneath it, which is there for anyone who wants it spelled out */
+  .keysample{
+    font-size:.62rem;line-height:1.6;margin:.45rem 0 .35rem;padding:.4rem .5rem;
+    background:var(--leather);border:1px solid var(--line);border-radius:5px;
+    word-break:break-all;
+  }
+  .keysample .drop{color:#5c5042;text-decoration:line-through}
+  .take{color:var(--gilt)}
+  .aside{display:block;font-size:.62rem;line-height:1.65;color:var(--faint);margin-top:.3rem}
+  .how > .aside{margin-top:.5rem}
+  .how input{margin-top:.5rem}
+  .kmsg.ok{color:var(--gilt-dim)}
+  .kmsg.bad{color:var(--red)}
+
+  footer{
+    text-align:center;padding:1rem;font-size:.62rem;color:#4d4238;letter-spacing:.06em;
+  }
+  footer b{color:var(--faint);font-weight:400}
+  footer a{color:var(--faint);text-decoration:none}
+  footer a:hover{color:var(--gilt)}
+  .notice-copy{
+    max-width:46rem;margin:.5rem auto 0;font-size:.55rem;line-height:1.7;
+    color:#453b32;letter-spacing:.04em;
+  }
+
+  .ghost{position:fixed;top:-3rem;left:0;opacity:0;width:1px;height:1px;border:none}
+
+  @media (max-width:640px){
+    header{padding:1rem 1.2rem .4rem}
+    .bigwpm{font-size:3.8rem}
+    #refInput{width:10rem}
+  }
+  @media (prefers-reduced-motion:reduce){
+    #caret{animation:none;transition:none}
+    #text{transition:none}
+    .drawer{transition:none}
+  }
+</style>
+</head>
+<body>
+<div class="gilt-edge"></div>
+
+<header>
+  <div class="masthead">Versewright<span class="amp">a typing office of the Scriptures</span></div>
+</header>
+
+<nav class="bar" aria-label="test configuration">
+  <div class="grp" role="group" aria-label="source">
+    <button id="mDaily" title="the verse of the day">daily</button>
+    <button id="mRandom" title="a random passage each run">random</button>
+    <button id="mPassage" title="type a passage you choose">passage</button>
+    <button id="mPinned" title="draw from your pinned passages">pinned</button>
+    <button id="mScribe" title="copy the whole Bible in order, verse by verse">scribe</button>
+    <button id="mCustom" title="type text of your own">custom</button>
+  </div>
+  <div class="grp" id="countGrp" role="group" aria-label="verse count">
+    <button data-count="1">1</button>
+    <button data-count="2">2</button>
+    <button data-count="3">3</button>
+    <button data-count="5">5</button>
+    <button data-count="10">10</button>
+    <span class="sep"></span><span style="padding-right:.4rem">verses</span>
+  </div>
+  <div class="grp show" id="refWrap">
+    <input id="refInput" placeholder="John 3:16-18 · ps 23 · 1 thess 5" spellcheck="false"
+           autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list"
+           aria-controls="refSuggest">
+    <button id="refGo">go</button>
+    <div class="suggest" id="refSuggest" role="listbox" aria-label="matching passages" hidden></div>
+  </div>
+  <div class="grp" id="trGrp">
+    <select id="translation" aria-label="translation">
+      <optgroup label="modern · your key">
+        <option value="esv">ESV</option>
+        <option value="niv">NIV</option>
+      </optgroup>
+      <optgroup label="modern">
+        <option value="nlt">NLT</option>
+      </optgroup>
+      <optgroup label="public domain">
+        <option value="web">WEB</option>
+        <option value="kjv">KJV</option>
+        <option value="asv">ASV</option>
+        <option value="bbe">BBE</option>
+        <option value="ylt">YLT</option>
+        <option value="darby">Darby</option>
+      </optgroup>
+    </select>
+  </div>
+  <div class="grp navgrp" role="group" aria-label="passage history">
+    <button id="navBack" title="back to the previous passage (shift+tab)" aria-label="previous passage">‹</button>
+    <button id="navFwd" title="forward again (tab)" aria-label="next passage">›</button>
+  </div>
+  <div class="grp"><button id="pinsBtn" aria-haspopup="dialog">desk<span class="cnt" id="pinCount"></span></button></div>
+</nav>
+
+<main>
+  <div class="stage">
+    <div id="typing">
+      <div class="refline">
+        <span id="refText"></span>
+        <span class="tr" id="trText"></span>
+        <span class="tr vod" id="vodTag" hidden>✦ verse of the day</span>
+        <span class="tr backtag" id="backTag" hidden></span>
+        <button class="pinbtn" id="editCustom" title="change this text" hidden>✎ edit</button>
+        <button class="pinbtn" id="pinCur" title="pin this passage" hidden>⚑ pin</button>
+        <button class="starbtn" id="starCur" hidden>☆</button>
+      </div>
+      <div class="scribeline" id="scribeLine" hidden>
+        <div class="sprog"><i id="sprogFill"></i></div>
+        <span id="sprogText"></span>
+      </div>
+      <div class="textwrap" id="textwrap">
+        <div id="text"></div>
+        <div id="caret" hidden></div>
+        <div class="veil" id="veil">click, or just start typing</div>
+      </div>
+    </div>
+
+    <div class="custom" id="customPanel" hidden>
+      <h2>Your own text</h2>
+      <div class="sub">Anything you like — a verse in a translation this app can’t reach, a hymn, a creed, a passage you are learning by heart. It stays in this browser, and it can be bookmarked like any other passage.</div>
+      <input id="customTitle" placeholder="a name for it — optional" spellcheck="false" autocomplete="off" maxlength="80">
+      <textarea id="customText" placeholder="paste or type the text here" spellcheck="false" rows="7"></textarea>
+      <div class="crow">
+        <button class="rbtn" id="customStart">type this</button>
+        <button class="rbtn" id="customCancel" hidden>cancel</button>
+        <span class="ccount" id="customCount"></span>
+      </div>
+    </div>
+
+    <div class="results" id="results">
+      <div class="bigwpm"><span id="rWpm">0</span><small>WPM</small><span class="pbtag" id="pbTag" hidden>BEST</span></div>
+      <div class="rref" id="rRef"></div>
+      <div class="rstats">
+        <div>accuracy<b id="rAcc"></b></div>
+        <div>raw<b id="rRaw"></b></div>
+        <div>errors<b id="rErr"></b></div>
+        <div>time<b id="rTime"></b></div>
+        <div>characters<b id="rChars"></b></div>
+      </div>
+      <div class="ractions">
+        <button class="rbtn" id="btnRepeat">repeat this passage<kbd>enter</kbd></button>
+        <button class="rbtn" id="btnNext">next passage<kbd>tab</kbd></button>
+        <button class="rbtn" id="btnPinRes">⚑ pin it</button>
+        <button class="rbtn" id="btnStarRes" hidden>☆ star it</button>
+      </div>
+      <div class="rhist" id="rhist" hidden>
+        <h3>RECENT RUNS</h3>
+        <div id="histRows"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span id="hints"></span><span id="srcLine"></span> · daily verse from <a href="https://labs.bible.org/api_web_service" target="_blank" rel="noopener">bible.org</a> · saved in your browser
+  <div class="notice-copy" id="copyLine" hidden></div>
+</footer>
+
+<input class="ghost" id="ghost" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="typing input">
+
+<div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="the desk">
+  <button class="close" id="drawerClose" aria-label="close">✕</button>
+  <h2>The desk</h2>
+
+  <div class="tabs" role="tablist" aria-label="desk sections">
+    <button role="tab" data-tab="bookmarks" id="tab-bookmarks" aria-controls="pane-bookmarks" aria-selected="true">bookmarks</button>
+    <button role="tab" data-tab="scribe" id="tab-scribe" aria-controls="pane-scribe" aria-selected="false" tabindex="-1">scribe</button>
+    <button role="tab" data-tab="sources" id="tab-sources" aria-controls="pane-sources" aria-selected="false" tabindex="-1">sources</button>
+    <button role="tab" data-tab="data" id="tab-data" aria-controls="pane-data" aria-selected="false" tabindex="-1">data</button>
+  </div>
+
+  <div class="pane" data-tab="bookmarks" id="pane-bookmarks" role="tabpanel" aria-labelledby="tab-bookmarks" tabindex="0">
+    <div class="sub">Pinned passages live in this browser. Choose <i>pinned</i> as the source to cycle through them in shuffled order — every pin comes up once before any repeats. Pin just one to run it over and over. <b>Star</b> the ones you are committing to memory and they rise to the top here.</div>
+    <button class="startoggle" id="starOnly" aria-pressed="false" hidden><span class="box">✓</span><span class="lbl"></span></button>
+    <input id="pinSearch" placeholder="search bookmarks" spellcheck="false" autocomplete="off" hidden>
+    <div class="pmatch" id="pinMatch" hidden></div>
+    <div id="pinList"></div>
+  </div>
+
+  <div class="pane" data-tab="scribe" id="pane-scribe" role="tabpanel" aria-labelledby="tab-scribe" tabindex="0" hidden>
+    <div class="sub">Copying the canon in order, verse by verse. The quill only moves when a passage is actually finished, so the text advances because you wrote it out — never because you skipped past it.</div>
+    <div class="spos" id="sdPos"></div>
+    <div class="sprog"><i id="sdFill"></i></div>
+    <div class="spct" id="sdPct"></div>
+    <div class="sub">Pick up anywhere — jumping moves the quill without erasing how far you have come.</div>
+    <select id="scribeJump" aria-label="jump to a book"></select>
+    <div class="drow" style="margin-top:.6rem">
+      <button class="rbtn" id="scribeReset">start over at Genesis</button>
+    </div>
+  </div>
+
+  <div class="pane" data-tab="sources" data-testid="sources" id="pane-sources" role="tabpanel" aria-labelledby="tab-sources" tabindex="0" hidden>
+    <div class="plain">
+      <p><b>The ESV and NIV aren’t stored in this app.</b> They belong to their publishers, who lend them out one passage at a time. To borrow them you need a <b>key</b> of your own.</p>
+      <p>A key is just a long password the publisher gives you. It is <b>free</b>, it takes about three minutes, and it asks for nothing but an email address. It doesn’t cost anything and there is no card to enter — the key only tells the publisher who is asking.</p>
+      <p>Below there is one box per translation. Get the key, paste it in the box, and that translation joins the menu at the top of the screen. Nothing else changes.</p>
+    </div>
+
+    <div class="krow">
+      <label for="esvKey">ESV <span class="kset" id="esvSet" hidden>✓ key saved</span></label>
+      <input id="esvKey" type="password" placeholder="paste your ESV key here" spellcheck="false" autocomplete="off">
+      <div class="kmsg" id="esvMsg" role="status"></div>
+      <details class="how" id="esvHow">
+        <summary>Show me how to get one</summary>
+        <ol class="steps">
+          <li>Open <a href="https://www.esv.org/" target="_blank" rel="noopener">esv.org</a> and make an account. It wants an email address and a password — nothing more.</li>
+          <li>Still signed in, open <a href="https://api.esv.org/account/create-application/" target="_blank" rel="noopener">api.esv.org/account/create-application</a>. <span class="aside">If it shows you a sign-in page instead, you aren’t logged in yet — do step 1 first.</span></li>
+          <li>Give the application a name — anything, it is only a label — and fill in <b>Intended Use</b>. <i>“Personal study”</i> is exactly right. Agree to the terms; the part that matters is that personal, non-commercial use like this is free. Approval is immediate, so the page will say <i>Approved: Yes</i> straight away.</li>
+          <li>Under <b>Application Keys</b> you will see something like this:
+            <div class="keysample"><span class="drop">Authorization: Token</span> <span class="take">3f9a1c07b4e28d…c07e</span></div>
+            <span class="aside">That is a whole line of computer instruction, and only the <span class="take">end part</span> is your key. Copy just that — not the words <i>Authorization</i> or <i>Token</i>. <b>If you do copy the whole line, paste it anyway:</b> the box above knows to throw the wrapping away.</span>
+          </li>
+          <li>Paste it in the box above. Then choose <b>ESV</b> in the menu at the top of the screen.</li>
+        </ol>
+        <div class="aside">Crossway allows 5,000 passages a day, which is far more than anyone can type. Treat the key like a password: it is yours, and their terms ask you not to pass it on. If it ever gets out, <b>Delete Key</b> and <b>Create Another Key</b> on that same page will replace it in seconds.</div>
+      </details>
+    </div>
+
+    <div class="krow">
+      <label for="nivKey">NIV <span class="kset" id="nivSet" hidden>✓ key saved</span></label>
+      <input id="nivKey" type="password" placeholder="paste your API.Bible key here" spellcheck="false" autocomplete="off">
+      <div class="kmsg" id="nivMsg" role="status"></div>
+      <details class="how" id="nivHow">
+        <summary>Show me how to get one</summary>
+        <ol class="steps">
+          <li>Open <a href="https://api.bible" target="_blank" rel="noopener">api.bible</a> and choose <b>Sign Up</b>. The NIV’s publisher doesn’t lend it out directly — this is the service that does it for them.</li>
+          <li>Choose the <b>Starter</b> plan. It costs <b>$0 a month</b> and asks for no card. It is for non-commercial use only, which is what this is.</li>
+          <li>It asks you to <b>pick 3 copyrighted Bibles</b>. Make sure one of them is the <b>NIV</b>. <span class="aside">This is the step people miss. If the NIV isn’t among your three, it won’t appear here no matter how good the key is.</span></li>
+          <li>You land on a dashboard. Your <b>API key</b> is in the <b>top-right corner</b> — a plain run of letters and numbers this time, with no wrapping around it. Copy it.</li>
+          <li>Paste it in the box above. Then choose <b>NIV</b> in the menu at the top of the screen.</li>
+        </ol>
+        <div class="aside">If it says the key works but the account doesn’t carry the NIV, go back to step 3 — the NIV isn’t one of your three yet.</div>
+      </details>
+    </div>
+
+    <div class="krow">
+      <label for="nltKey">NLT — already working <span class="kset" id="nltSet" hidden>✓ key saved</span></label>
+      <div class="plain"><p>Nothing to do. Tyndale lends the NLT to anyone who asks, so it is in the menu already. Choose <b>NLT</b> at the top of the screen and it appears.</p></div>
+      <details class="how" id="nltHow">
+        <summary>I’d rather register anyway</summary>
+        <ol class="steps">
+          <li>Only worth doing if you would like Tyndale to be able to count you. It changes nothing here.</li>
+          <li>Open <a href="https://api.nlt.to" target="_blank" rel="noopener">api.nlt.to</a>, register, and paste the key below.</li>
+        </ol>
+        <input id="nltKey" type="password" placeholder="optional — the NLT works without one" spellcheck="false" autocomplete="off">
+        <div class="kmsg" id="nltMsg" role="status"></div>
+      </details>
+    </div>
+
+    <div class="plain">
+      <p><b>Your keys stay here.</b> They are saved in this browser only — never sent anywhere but to the publisher they belong to, and deliberately left out of the export file, because a key is yours and not meant to be passed on.</p>
+    </div>
+
+    <div class="dsec">
+      <h3>STORED TEXT</h3>
+      <div class="sub">Chapters already fetched are kept here so the scribe resumes without asking for them again. Crossway allows a local copy of no more than 500 verses, or half of any one book, so the store is capped below both and the oldest chapter is dropped first. They ask that it be cleared now and then, so the text stays current.</div>
+      <div class="spct" id="cacheMsg"></div>
+      <div class="drow">
+        <button class="rbtn" id="cacheClear">forget stored text</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="pane" data-tab="data" id="pane-data" role="tabpanel" aria-labelledby="tab-data" tabindex="0" hidden>
+    <div class="sub">Settings, bookmarks, best, and recent runs — download them as JSON and import the file on another device. Publisher keys and stored text are left out.</div>
+    <div class="drow">
+      <button class="rbtn" id="expBtn">export json</button>
+      <button class="rbtn" id="impBtn">import json</button>
+    </div>
+    <div class="dmsg" id="dataMsg" role="status"></div>
+    <input type="file" id="impFile" accept=".json,application/json" hidden>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ============================== persistence ============================== */
+const LS_KEY = 'versewright.v1';
+/* the app was called Scriptorium until it was renamed; bookmarks, stars, settings
+   and records saved under the old key are adopted once, then the new key owns them.
+   Safe to drop this fallback once returning users have all been through a session. */
+const LS_KEY_LEGACY = 'scriptorium.v1';
+const DEFAULT_SETTINGS = {mode:'daily', count:2, translation:'web', passageRef:'John 3:16-18', starredOnly:false, deskTab:'bookmarks',
+                         customText:'', customTitle:''};
+const DEFAULT_SCRIBE = {book:0, chapter:1, verse:1, done:false};
+let store = { settings:Object.assign({}, DEFAULT_SETTINGS), pins:[], best:null, history:[],
+              scribe:Object.assign({}, DEFAULT_SCRIBE), keys:{} };
+try {
+  const raw = localStorage.getItem(LS_KEY) || localStorage.getItem(LS_KEY_LEGACY);
+  if (raw) { const s = JSON.parse(raw); store = Object.assign(store, s);
+             store.settings = Object.assign({}, DEFAULT_SETTINGS, s.settings); }
+} catch(e) {}
+/* claim the new key immediately, so the adoption above doesn't depend on the
+   session happening to reach a save (the old key is left untouched as a backstop) */
+try { if (!localStorage.getItem(LS_KEY) && localStorage.getItem(LS_KEY_LEGACY)) save(); } catch(e) {}
+/* one-time switch to the new daily-verse default for stores saved before it existed */
+if (!store.v){ store.v = 2; store.settings.mode = 'daily'; }
+store.scribe = Object.assign({}, DEFAULT_SCRIBE, store.scribe);
+/* publisher API keys the reader supplied. Kept beside the rest of the store but
+   deliberately outside the export file — Crossway's terms forbid passing a key
+   on, and an export is a file people mail to themselves and each other. */
+store.keys = Object.assign({esv:'', apibible:'', nlt:'', nivBible:''}, store.keys);
+
+/* the first open of each day lands on the verse of the day; once it has been
+   seen, a mode the user picks holds for the rest of the day */
+function localDay(){ const d = new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+if (store.settings.mode !== 'daily' && store.lastDailyDay !== localDay())
+  store.settings.mode = 'daily';
+function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(store)); }catch(e){} }
+
+/* ============================== dom refs ============================== */
+const $ = id => document.getElementById(id);
+const els = {
+  text: $('text'), wrap: $('textwrap'), caret: $('caret'), veil: $('veil'),
+  refText: $('refText'), trText: $('trText'), pinCur: $('pinCur'), starCur: $('starCur'),
+  typing: $('typing'), results: $('results'),
+  ghost: $('ghost'), refInput: $('refInput'), refWrap: $('refWrap'),
+  countGrp: $('countGrp'), translation: $('translation'),
+  pinCount: $('pinCount'), drawer: $('drawer'), pinList: $('pinList'),
+};
+/* every translation the menu offers, and where its text comes from. The
+   public-domain six ride on bible-api.com. The three modern ones are served by
+   their publishers instead: Tyndale hands out the NLT freely, while the ESV and
+   NIV want a key, which the reader signs up for and pastes in themselves. */
+const TRANSLATIONS = {
+  esv:  {name:'English Standard Version', src:'esv',      key:'esv'},
+  niv:  {name:'New International Version', src:'apibible', key:'apibible'},
+  nlt:  {name:'New Living Translation',   src:'nlt'},
+  web:  {name:'World English Bible',      src:'bibleapi'},
+  kjv:  {name:'King James Version',       src:'bibleapi'},
+  asv:  {name:'American Standard',        src:'bibleapi'},
+  bbe:  {name:'Basic English',            src:'bibleapi'},
+  ylt:  {name:'Young’s Literal',          src:'bibleapi'},
+  darby:{name:'Darby',                    src:'bibleapi'},
+  /* not in the menu — the daily-verse service serves the NET, and a passage it
+     can hand over directly is better than no verse of the day at all */
+  net:  {name:'New English Translation',  src:'bibleapi'},
+  /* not a translation at all: text the reader brought themselves, fetched from
+     nowhere. It sits here so the label and the credit line resolve like any
+     other source instead of falling back to bible-api's */
+  custom: {name:'your own text', src:'custom'},
+};
+const TR_NAMES = {};
+for (const k in TRANSLATIONS) TR_NAMES[k] = TRANSLATIONS[k].name;
+/* the key a translation needs, or '' if it needs none; '' also when the key is
+   already in hand, so callers can treat a truthy answer as "ask the reader" */
+function missingKey(tr){
+  const t = TRANSLATIONS[tr];
+  return (t && t.key && !store.keys[t.key]) ? t.key : '';
+}
+
+/* ============================== test state ============================== */
+let chars = [];          // [{el, c}]
+let idx = 0;
+let started = false, finished = false, startTime = 0;
+let keystrokes = 0, errors = 0, correctChars = 0;
+let current = null;      // {reference, translation, verses:[{verse,text}]}
+let lineH = 40;
+let caretIdleTimer = null;
+
+/* ============================== text handling ============================== */
+function cleanText(t){
+  return t.replace(/[‘’ʼ]/g, "'")
+          .replace(/[“”]/g, '"')
+          .replace(/[–—]/g, '-')
+          .replace(/…/g, '...')
+          .replace(/[¶]/g, '')
+          .replace(/\s+/g, ' ')
+          .replace(/[^\x20-\x7E]/g, '')
+          .trim();
+}
+
+function renderPassage(p, fromTrail){
+  current = p;
+  if (!fromTrail) pushTrail(p);
+  els.refText.textContent = p.reference;
+  els.trText.textContent = (TR_NAMES[p.translation] || p.translation).toUpperCase();
+  renderAttribution(p.translation, true);   /* the licence follows the text on screen */
+  $('vodTag').hidden = !p.daily;
+  if (p.daily && store.lastDailyDay !== localDay()){ store.lastDailyDay = localDay(); save(); }
+  $('editCustom').hidden = !p.custom;
+  els.pinCur.hidden = false;
+  updatePinBtn();
+  updateStarBtn();
+  renderScribe();
+
+  els.text.innerHTML = '';
+  els.text.style.transform = 'translateY(0)';
+  chars = [];
+
+  const words = [];
+  for (const v of p.verses){
+    const t = cleanText(v.text);
+    if (!t) continue;
+    t.split(' ').forEach((w,i)=> words.push({w, vn: i===0 ? v.verse : null}));
+  }
+  const frag = document.createDocumentFragment();
+  words.forEach((word, wi)=>{
+    const wEl = document.createElement('span'); wEl.className = 'word';
+    if (word.vn != null && p.verses.length > 1){
+      const vn = document.createElement('span'); vn.className = 'vn';
+      vn.textContent = word.vn; wEl.appendChild(vn);
+    }
+    for (const c of word.w){
+      const s = document.createElement('span'); s.className = 'ch'; s.textContent = c;
+      wEl.appendChild(s); chars.push({el:s, c});
+    }
+    if (wi < words.length - 1){
+      const s = document.createElement('span'); s.className = 'ch'; s.textContent = ' ';
+      wEl.appendChild(s); chars.push({el:s, c:' '});
+    }
+    frag.appendChild(wEl);
+  });
+  els.text.appendChild(frag);
+
+  /* unhide before measuring: while #typing is display:none every offset reads
+     0, which parks the caret at x=0 — left of the verse number, as if the
+     number were the first thing to type */
+  showTyping();
+  sizeWrap();
+  resetRun();
+  reclaimFocus();
+  renderHints();          /* after chars and finished settle, not before */
+}
+
+function resetRun(){
+  idx = 0; started = false; finished = false;
+  keystrokes = 0; errors = 0; correctChars = 0;
+  chars.forEach(c => c.el.className = 'ch');
+  els.text.style.transform = 'translateY(0)';
+  els.caret.hidden = chars.length === 0;
+  placeCaret();
+  renderHints();        /* finished just changed — esc out of results drops "enter" */
+}
+
+function sizeWrap(){
+  lineH = parseFloat(getComputedStyle(els.text).lineHeight) || 40;
+  /* fill about 40% of the viewport with whole lines (3–6 of them); the grid
+     starts a hair below 0 because raised verse numbers poke above the first
+     line, so clip exactly at the last line's bottom — never mid-line */
+  const lines = Math.min(6, Math.max(3, Math.floor(window.innerHeight * 0.42 / lineH)));
+  const base = chars.length ? chars[0].el.offsetTop : 0;
+  els.wrap.style.maxHeight = (base + lineH * lines) + 'px';
+}
+
+function placeCaret(){
+  if (!chars.length) return;
+  const t = chars[Math.min(idx, chars.length-1)].el;
+  const atEnd = idx >= chars.length;
+  const left = atEnd ? t.offsetLeft + t.offsetWidth : t.offsetLeft;
+  const top = t.offsetTop;
+  const shift = Math.max(0, top - chars[0].el.offsetTop - lineH);
+  els.text.style.transform = 'translateY(' + (-shift) + 'px)';
+  /* the caret is a sibling of #text, so it must apply the same scroll shift */
+  els.caret.style.left = (left - 1) + 'px';
+  els.caret.style.top = (top - shift + lineH*0.16) + 'px';
+  els.caret.style.height = (lineH*0.68) + 'px';
+  els.caret.classList.add('moving');
+  clearTimeout(caretIdleTimer);
+  caretIdleTimer = setTimeout(()=> els.caret.classList.remove('moving'), 400);
+}
+
+/* ============================== typing ============================== */
+function onChar(c){
+  if (finished || !chars.length) return;
+  if (!started){ started = true; startTime = performance.now(); }
+  const cur = chars[idx];
+  const want = cur.c;
+  const hit = (c === want) || (want === ' ' && c === ' ');
+  keystrokes++;
+  if (hit){ cur.el.classList.add('ok'); correctChars++; }
+  else { cur.el.classList.add('bad'); errors++; }
+  idx++;
+  placeCaret();
+  if (idx >= chars.length) finish();
+}
+
+function onBackspace(word){
+  if (finished || idx === 0) return;
+  const step = ()=>{
+    idx--;
+    const cur = chars[idx];
+    if (cur.el.classList.contains('ok')) correctChars--;
+    cur.el.className = 'ch';
+  };
+  step();
+  if (word){
+    while (idx > 0 && chars[idx-1].c !== ' ') step();
+  }
+  placeCaret();
+}
+
+function finish(){
+  finished = true;
+  const ms = performance.now() - startTime;
+  const min = ms/60000;
+  const wpm = Math.round((correctChars/5)/min);
+  const raw = Math.round((idx/5)/min);
+  const acc = keystrokes ? Math.round(100*(keystrokes-errors)/keystrokes) : 100;
+  const secs = (ms/1000).toFixed(1);
+
+  /* the quill only moves for a passage actually carried to the end */
+  if (store.settings.mode === 'scribe' && current.scribe){ advanceScribe(current.scribe); renderScribe(); }
+
+  const isPB = !store.best || wpm > store.best.wpm;
+  if (isPB) store.best = {wpm, acc, ref: current.reference, date: new Date().toISOString().slice(0,10)};
+  store.history.unshift({wpm, acc, ref: current.reference, secs});
+  store.history = store.history.slice(0,8);
+  save();
+
+  $('rWpm').textContent = wpm;
+  $('pbTag').hidden = !isPB;
+  $('rRef').textContent = current.reference + ' — ' + (TR_NAMES[current.translation]||current.translation);
+  $('rAcc').textContent = acc + '%';
+  $('rRaw').textContent = raw + ' wpm';
+  $('rErr').textContent = errors;
+  $('rTime').textContent = secs + 's';
+  $('rChars').textContent = chars.length;
+  updatePinResBtn();
+  updateStarBtn();
+  renderHistory();
+  syncResultActions();
+
+  els.typing.style.display = 'none';
+  els.results.classList.add('show');
+  renderHints();
+}
+
+/* what "next" means depends entirely on the source — reloading would just
+   redraw the same text in daily, passage and scribe modes. One map, so the
+   footer hint and the results button can never drift apart. */
+const NEXT_LABEL = {daily:'a random passage', random:'next passage',
+                    passage:'change the passage', pinned:'next bookmark', scribe:'carry on',
+                    custom:null};
+
+/* whether tab has anywhere to go from where we are standing */
+function nextLabel(){
+  if (trailIdx < trail.length - 1) return 'forward';       /* replaying the trail */
+  const m = store.settings.mode;
+  if (m === 'scribe' && !finished) return null;            /* the quill moves only on completion */
+  if (m === 'pinned' && !store.pins.length) return null;   /* nothing pinned to advance through */
+  if (m === 'custom') return null;    /* one text, and it is already on screen */
+  return NEXT_LABEL[m] || 'next passage';
+}
+
+function syncResultActions(){
+  const m = store.settings.mode;
+  $('btnRepeat').innerHTML = (m === 'daily' ? 'type it again' : 'repeat this passage') + '<kbd>enter</kbd>';
+  /* offering "next" where tab does nothing is a button that lies */
+  const n = nextLabel();
+  $('btnNext').hidden = !n;
+  $('btnNext').innerHTML = (n || 'next passage') + '<kbd>tab</kbd>';
+}
+
+/* the footer names only the keys that actually do something from here — a hint
+   for a key that silently no-ops is worse than no hint */
+function renderHints(){
+  /* the editor answers to its own buttons; naming the typing shortcuts under it
+     would be pointing at keys that do nothing */
+  if ($('customPanel') && $('customPanel').classList.contains('show')){
+    $('hints').innerHTML = '';
+    return;
+  }
+  const m = store.settings.mode, out = [];
+  const n = nextLabel();
+  if (n) out.push('<b>tab</b> ' + n);
+  if (trailIdx > 0) out.push('<b>shift+tab</b> back');
+  /* enter is bound only once a run is complete */
+  if (finished) out.push('<b>enter</b> ' + (m === 'daily' ? 'type it again' : 'repeat'));
+  /* esc stays bound the whole time and "restart" is true from any point in a
+     passage, so it is listed as soon as one is loaded rather than appearing
+     under the reader's hands at the first keystroke */
+  if (chars.length) out.push('<b>esc</b> restart');
+  $('hints').innerHTML = out.length ? out.join(' · ') + ' &nbsp;—&nbsp; ' : '';
+}
+
+function goNext(){
+  const m = store.settings.mode;
+  if (m === 'daily'){ setMode('random'); return; }
+  if (m === 'passage'){ els.refInput.focus(); els.refInput.select(); return; }
+  newTest();
+}
+
+function renderHistory(){
+  const rows = store.history.map(h =>
+    '<div class="row"><span class="w">'+h.wpm+' wpm</span><span class="a">'+h.acc+'%</span><span>'+escapeHtml(h.ref)+'</span></div>'
+  ).join('');
+  $('histRows').innerHTML = rows;
+  $('rhist').hidden = store.history.length < 2;
+}
+function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function showTyping(){
+  els.results.classList.remove('show');
+  $('customPanel').classList.remove('show');
+  els.typing.style.display = '';
+}
+
+/* ============================== the canon ==============================
+   book order and chapter counts for the 66-book Protestant canon — 1,189
+   chapters. Progress is counted in chapters rather than verses because verse
+   totals differ between translations (some omit verses the KJV numbers), while
+   the chapter count is the same in all of them. */
+const CANON = ('Genesis 50|Exodus 40|Leviticus 27|Numbers 36|Deuteronomy 34|Joshua 24|Judges 21|Ruth 4|1 Samuel 31|2 Samuel 24|1 Kings 22|2 Kings 25|1 Chronicles 29|2 Chronicles 36|Ezra 10|Nehemiah 13|Esther 10|Job 42|Psalms 150|Proverbs 31|Ecclesiastes 12|Song of Solomon 8|Isaiah 66|Jeremiah 52|Lamentations 5|Ezekiel 48|Daniel 12|Hosea 14|Joel 3|Amos 9|Obadiah 1|Jonah 4|Micah 7|Nahum 3|Habakkuk 3|Zephaniah 3|Haggai 2|Zechariah 14|Malachi 4|Matthew 28|Mark 16|Luke 24|John 21|Acts 28|Romans 16|1 Corinthians 16|2 Corinthians 13|Galatians 6|Ephesians 6|Philippians 4|Colossians 4|1 Thessalonians 5|2 Thessalonians 3|1 Timothy 6|2 Timothy 4|Titus 3|Philemon 1|Hebrews 13|James 5|1 Peter 5|2 Peter 3|1 John 5|2 John 1|3 John 1|Jude 1|Revelation 22')
+  .split('|').map(s => { const i = s.lastIndexOf(' '); return [s.slice(0,i), +s.slice(i+1)]; });
+const TOTAL_CH = CANON.reduce((n,b) => n + b[1], 0);
+/* chapters lying before each book, so a position converts to an absolute count */
+const CANON_CUM = (() => { let n = 0; return CANON.map(b => { const c = n; n += b[1]; return c; }); })();
+
+/* how many verses stand in each chapter, in canon order — commas between
+   chapters, a bar between books, 31,102 verses in all. This is the numbering the
+   KJV settled and that every English translation still counts by, so it can say
+   where a chapter ends before anything is fetched.
+
+   It is not quite universal, which is why it is only ever offered as a fact and
+   never used to refuse a reference: a few chapters gain or lose a verse between
+   translations, and the publisher APIs clamp a range that runs long anyway.
+   Chapter counts stay the arithmetic of record for the scribe's progress — those
+   really are the same everywhere. */
+const CHAPTER_VERSES = ('31,25,24,26,32,22,24,22,29,32,32,20,18,24,21,16,27,33,38,18,34,24,20,67,34,35,46,22,35,43,55,32,20,31,29,43,36,30,23,23,57,38,34,34,28,34,31,22,33,26|22,25,22,31,23,30,25,32,35,29,10,51,22,31,27,36,16,27,25,26,36,31,33,18,40,37,21,43,46,38,18,35,23,35,35,38,29,31,43,38|17,16,17,35,19,30,38,36,24,20,47,8,59,57,33,34,16,30,37,27,24,33,44,23,55,46,34|54,34,51,49,31,27,89,26,23,36,35,16,33,45,41,50,13,32,22,29,35,41,30,25,18,65,23,31,40,16,54,42,56,29,34,13|46,37,29,49,33,25,26,20,29,22,32,32,18,29,23,22,20,22,21,20,23,30,25,22,19,19,26,68,29,20,30,52,29,12|18,24,17,24,15,27,26,35,27,43,23,24,33,15,63,10,18,28,51,9,45,34,16,33|36,23,31,24,31,40,25,35,57,18,40,15,25,20,20,31,13,31,30,48,25|22,23,18,22|28,36,21,22,12,21,17,22,27,27,15,25,23,52,35,23,58,30,24,42,15,23,29,22,44,25,12,25,11,31,13|27,32,39,12,25,23,29,18,13,19,27,31,39,33,37,23,29,33,43,26,22,51,39,25|53,46,28,34,18,38,51,66,28,29,43,33,34,31,34,34,24,46,21,43,29,53|18,25,27,44,27,33,20,29,37,36,21,21,25,29,38,20,41,37,37,21,26,20,37,20,30|54,55,24,43,26,81,40,40,44,14,47,40,14,17,29,43,27,17,19,8,30,19,32,31,31,32,34,21,30|17,18,17,22,14,42,22,18,31,19,23,16,22,15,19,14,19,34,11,37,20,12,21,27,28,23,9,27,36,27,21,33,25,33,27,23|11,70,13,24,17,22,28,36,15,44|11,20,32,23,19,19,73,18,38,39,36,47,31|22,23,15,17,14,14,10,17,32,3|22,13,26,21,27,30,21,22,35,22,20,25,28,22,35,22,16,21,29,29,34,30,17,25,6,14,23,28,25,31,40,22,33,37,16,33,24,41,30,24,34,17|6,12,8,8,12,10,17,9,20,18,7,8,6,7,5,11,15,50,14,9,13,31,6,10,22,12,14,9,11,12,24,11,22,22,28,12,40,22,13,17,13,11,5,26,17,11,9,14,20,23,19,9,6,7,23,13,11,11,17,12,8,12,11,10,13,20,7,35,36,5,24,20,28,23,10,12,20,72,13,19,16,8,18,12,13,17,7,18,52,17,16,15,5,23,11,13,12,9,9,5,8,28,22,35,45,48,43,13,31,7,10,10,9,8,18,19,2,29,176,7,8,9,4,8,5,6,5,6,8,8,3,18,3,3,21,26,9,8,24,13,10,7,12,15,21,10,20,14,9,6|33,22,35,27,23,35,27,36,18,32,31,28,25,35,33,33,28,24,29,30,31,29,35,34,28,28,27,28,27,33,31|18,26,22,16,20,12,29,17,18,20,10,14|17,17,11,16,16,13,13,14|31,22,26,6,30,13,25,22,21,34,16,6,22,32,9,14,14,7,25,6,17,25,18,23,12,21,13,29,24,33,9,20,24,17,10,22,38,22,8,31,29,25,28,28,25,13,15,22,26,11,23,15,12,17,13,12,21,14,21,22,11,12,19,12,25,24|19,37,25,31,31,30,34,22,26,25,23,17,27,22,21,21,27,23,15,18,14,30,40,10,38,24,22,17,32,24,40,44,26,22,19,32,21,28,18,16,18,22,13,30,5,28,7,47,39,46,64,34|22,22,66,22,22|28,10,27,17,17,14,27,18,11,22,25,28,23,23,8,63,24,32,14,49,32,31,49,27,17,21,36,26,21,26,18,32,33,31,15,38,28,23,29,49,26,20,27,31,25,24,23,35|21,49,30,37,31,28,28,27,27,21,45,13|11,23,5,19,15,11,16,14,17,15,12,14,16,9|20,32,21|15,16,15,13,27,14,17,14,15|21|17,10,10,11|16,13,12,13,15,16,20|15,13,19|17,20,19|18,15,20|15,23|21,13,10,14,11,15,14,23,17,12,17,14,9,21|14,17,18,6|25,23,17,25,48,34,29,34,38,42,30,50,58,36,39,28,27,35,30,34,46,46,39,51,46,75,66,20|45,28,35,41,43,56,37,38,50,52,33,44,37,72,47,20|80,52,38,44,39,49,50,56,62,42,54,59,35,35,32,31,37,43,48,47,38,71,56,53|51,25,36,54,47,71,53,59,41,42,57,50,38,31,27,33,26,40,42,31,25|26,47,26,37,42,15,60,40,43,48,30,25,52,28,41,40,34,28,41,38,40,30,35,27,27,32,44,31|32,29,31,25,21,23,25,39,33,21,36,21,14,23,33,27|31,16,23,21,13,20,40,13,27,33,34,31,13,40,58,24|24,17,18,18,21,18,16,24,15,18,33,21,14|24,21,29,31,26,18|23,22,21,32,33,24|30,30,21,23|29,23,25,18|10,20,13,18,28|12,17,18|20,15,16,16,25,21|18,26,17,22|16,15,15|25|14,18,19,16,14,20,28,13,28,39,40,29,25|27,26,18,17,20|25,25,22,19,14|21,22,18|10,29,24,21,21|13|14|25|20,29,22,11,14,17,17,13,21,11,19,17,18,20,8,21,18,24,21,15,27,21')
+  .split('|').map(s => s.split(',').map(Number));
+const BOOK_VERSES = CHAPTER_VERSES.map(a => a.reduce((n, v) => n + v, 0));
+/* verses in one chapter, or 0 for a chapter no book has — callers that have
+   already been through readRef never ask for one, but the suggestion box reads
+   half-typed input and must not throw over a stray number */
+const chVerses = (bi, ch) => CHAPTER_VERSES[bi][ch - 1] || 0;
+/* "1 chapter" / "21 chapters", which this file was spelling out by hand */
+const tally = (n, word) => n + ' ' + word + (n === 1 ? '' : 's');
+
+/* ============================== your own text ==============================
+   Text the reader supplies is dressed as a passage so that everything
+   downstream — rendering, the trail, bookmarks, the results — needs to know
+   nothing about where a passage came from. One verse, unnumbered, because a
+   verse number over text nobody has numbered would be a fiction.
+
+   The ceiling is about the typing surface rather than storage: every character
+   becomes its own element, and somewhere past a few thousand the caret
+   arithmetic on each keystroke starts to be felt. */
+const CUSTOM_MAX = 5000;
+
+/* `text` is what gets typed — tidied, one line. `raw` is what was written,
+   line breaks and all, kept only so the editor can show it back unspoiled. The
+   two must not be confused: identity is always the tidied form, or the same
+   passage would hash differently depending on which way it was opened. */
+function customPassage(text, title, raw){
+  const t = String(title || '').trim();
+  return {
+    reference: t || 'Your own text',
+    translation: 'custom',
+    verses: [{verse: 1, text}],
+    custom: {text, title: t, raw: raw == null ? text : raw},
+  };
+}
+
+/* a small deterministic hash of the text, so the same passage pinned twice is
+   one bookmark rather than two, and an untitled one is still distinguishable */
+function textHash(str){
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36);
+}
+
+/* ============================== references ==============================
+   bible-api.com reads a reference as prose and needs no help. The publisher
+   APIs each want their own coded form, so a reference has to be understood here
+   before it can be asked for. Two codes per book, in canon order: the
+   abbreviation Tyndale's NLT API answers to, then the three-letter USFM id
+   API.Bible uses. Every NLT abbreviation below was checked against the live
+   service — it rejects several forms you would expect to work (1John, and
+   SongofSolomon among them), so these are not interchangeable with the names. */
+const BOOK_CODES = ('Gen GEN|Exod EXO|Lev LEV|Num NUM|Deut DEU|Josh JOS|Judg JDG|Ruth RUT|1Sam 1SA|2Sam 2SA|1Kgs 1KI|2Kgs 2KI|1Chr 1CH|2Chr 2CH|Ezra EZR|Neh NEH|Esth EST|Job JOB|Ps PSA|Prov PRO|Eccl ECC|Song SNG|Isa ISA|Jer JER|Lam LAM|Ezek EZK|Dan DAN|Hos HOS|Joel JOL|Amos AMO|Obad OBA|Jonah JON|Mic MIC|Nah NAM|Hab HAB|Zeph ZEP|Hag HAG|Zech ZEC|Mal MAL|Matt MAT|Mark MRK|Luke LUK|John JHN|Acts ACT|Rom ROM|1Cor 1CO|2Cor 2CO|Gal GAL|Eph EPH|Phil PHP|Col COL|1Thes 1TH|2Thes 2TH|1Tim 1TI|2Tim 2TI|Titus TIT|Phlm PHM|Heb HEB|Jas JAS|1Pet 1PE|2Pet 2PE|1Jn 1JN|2Jn 2JN|3Jn 3JN|Jude JUD|Rev REV')
+  .split('|').map(s => s.split(' '));
+
+const normBook = s => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
+
+/* the shorthand people actually type, over and above the full name, the NLT
+   abbreviation and the USFM code, which are registered automatically. In canon
+   order, one group per book.
+
+   Genuinely ambiguous short forms are left out on purpose — "Ez" (Ezra or
+   Ezekiel), "Hb" (Habakkuk or Hebrews), "Jo" (five books), "1C" (Corinthians or
+   Chronicles), "1T" (Timothy or Thessalonians) — because the suggestion list can
+   offer a choice where a guess would simply be wrong half the time. Registering
+   one of them would not resolve the ambiguity, only hide it behind a coin
+   toss. */
+const BOOK_EXTRA = ('Gn Gene Genes|Ex Exo Exd|Lv Levi Lvt|Nm Nu Nb Numb|Dt Deu De|Jsh|Jgs Jg Jdgs|Rt Ru Rth|1Sm 1Sa 1S|2Sm 2Sa 2S|1Kg 1Ki 1K 1Kin|2Kg 2Ki 2K 2Kin|1Ch 1Chron 1Cr|2Ch 2Chron 2Cr|Ezr|Ne Nehem|Es|Jb|Psalm Pss Psm Pslm|Pr Prv Pro|Ec Eccles Ecc Qoh|Songs SoS SS Cant Canticles SongofSongs|Is Isai|Jr Jerem|Lm La|Eze|Dn Da|Ho Hs|Jl Joe|Am Amo|Ob|Jnh Jona|Mi Mc|Na|Habak|Zp Zph|Hg Hagg|Zch Zc|Ml|Mt Mth|Mk Mar Mr|Lk Lu|Jn Joh|Ac|Rm Ro|1Corin|2Corin|Ga Gl|Ep Ephes|Pp Philip Phi|Co Cl|1Thess 1Ts|2Thess 2Ts|1Tm|2Tm|Ti Tt|Philem Pm|Hebr|Jm Jms Ja|1Pt 1P|2Pt 2P|1Jhn 1Jo 1J|2Jhn 2Jo 2J|3Jhn 3Jo 3J|Jd|Rv Re Apoc Apocalypse Revelations').split('|');
+
+/* every spelling that resolves to a canon index: the name itself, both API
+   codes, the shorthand above, and — for a numbered book — each of them again
+   under every way people write the numeral */
+const BOOK_ALIAS = (() => {
+  const m = {};
+  const add = (text, i) => {
+    const n = normBook(text);
+    if (!n || m[n] != null) return;      /* first spelling registered wins */
+    m[n] = i;
+    /* 1 John → I John, First John, 1st John; and the same for 1Jn, 1JN, 1Jo… */
+    const num = /^([123])(.+)$/.exec(n);
+    if (num){
+      const d = +num[1], rest = num[2];
+      ['i'.repeat(d), ['first','second','third'][d-1], d + ['st','nd','rd'][d-1]]
+        .forEach(pre => { if (m[pre + rest] == null) m[pre + rest] = i; });
+    }
+  };
+  /* full names first, so a name always beats another book's shorthand */
+  CANON.forEach((b, i) => add(b[0], i));
+  CANON.forEach((b, i) => { add(BOOK_CODES[i][0], i); add(BOOK_CODES[i][1], i); });
+  CANON.forEach((b, i) => BOOK_EXTRA[i].split(/\s+/).forEach(a => add(a, i)));
+  return m;
+})();
+
+/* Levenshtein, abandoned as soon as the whole working row is past the budget —
+   it is asked 66 times per keystroke and only ever cares about near misses */
+function editDistance(a, b, max){
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let prev = [];
+  for (let j = 0; j <= b.length; j++) prev[j] = j;
+  for (let i = 1; i <= a.length; i++){
+    const cur = [i];
+    let best = i;
+    for (let j = 1; j <= b.length; j++){
+      cur[j] = Math.min(prev[j] + 1, cur[j-1] + 1, prev[j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+      if (cur[j] < best) best = cur[j];
+    }
+    if (best > max) return max + 1;
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+/* what book, if any, some typed text means. Four passes, narrowing: a known
+   spelling, then a name it could still be growing into, then a misspelling of
+   one. `options` carries everything it could be, which is what the suggestion
+   list offers when the answer isn't yet a single book. */
+function findBook(text){
+  const n = normBook(text);
+  if (!n) return {bi: null, how: 'none', options: []};
+  if (BOOK_ALIAS[n] != null) return {bi: BOOK_ALIAS[n], how: 'alias', options: [BOOK_ALIAS[n]]};
+
+  /* still being typed: every name, then every shorthand, that starts this way */
+  const seen = {}, pre = [];
+  const consider = i => { if (!seen[i]){ seen[i] = 1; pre.push(i); } };
+  CANON.forEach((b, i) => { if (normBook(b[0]).indexOf(n) === 0) consider(i); });
+  if (!pre.length) for (const k in BOOK_ALIAS) if (k.indexOf(n) === 0) consider(BOOK_ALIAS[k]);
+  pre.sort((a, b) => a - b);
+  if (pre.length) return {bi: pre.length === 1 ? pre[0] : null, how: 'prefix', options: pre};
+
+  /* nothing begins that way — read it as a misspelling. A tie is left unresolved
+     rather than guessed at: two books equally close is a choice, not an answer */
+  const budget = n.length <= 5 ? 1 : 2;
+  let best = null, bestD = budget + 1, tied = false;
+  CANON.forEach((b, i) => {
+    const d = editDistance(n, normBook(b[0]), budget);
+    if (d < bestD){ bestD = d; best = i; tied = false; }
+    else if (d === bestD && d <= budget) tied = true;
+  });
+  if (best != null && !tied) return {bi: best, how: 'fuzzy', options: [best]};
+  return {bi: null, how: 'none', options: []};
+}
+
+/* John 3:16 · John 3:16-18 · Psalm 23 · Psalm 23-24 · Matthew 5:1-6:4
+   → {bi, book, chapter, verse, endChapter, endVerse}, verse null for a whole
+   chapter. Returns null on anything it cannot place, which the callers read as
+   "let bible-api try the prose" or "tell the reader it wasn't found". */
+const REF_RE = /^\s*((?:[1-3]\s*)?[A-Za-z][A-Za-z.\s]*?)\s*(\d+)\s*(?::\s*(\d+))?\s*(?:[-\u2013\u2014]\s*(?:(\d+)\s*:\s*)?(\d+))?\s*$/;
+/* the book part of whatever has been typed so far, which may be all there is
+   yet — the suggestion list needs to read a half-finished reference */
+const BOOK_HEAD_RE = /^\s*((?:[1-3]\s*)?[A-Za-z][A-Za-z.\s]*?)\s*(\d.*)?$/;
+
+/* the input taken apart, with an account of what happened: which book it found
+   and how, or precisely what stopped it. The box under the field is built out of
+   this, and so are the failure notices, which is why it reports a reason rather
+   than just returning nothing. */
+function readRef(str){
+  const raw = String(str || '').trim();
+  if (!raw) return {error: 'empty'};
+  const m = REF_RE.exec(raw);
+  if (!m) return {error: 'shape'};
+  const f = findBook(m[1]);
+  if (f.bi == null) return {error: 'book', typed: m[1].trim(), options: f.options};
+  const bi = f.bi, chapters = CANON[bi][1];
+  const chapter = +m[2];
+  if (!chapter || chapter > chapters) return {error: 'chapter', bi, asked: chapter};
+  const r = {bi, book: CANON[bi][0], chapter, verse: m[3] ? +m[3] : null,
+             endChapter: m[4] ? +m[4] : null, endVerse: m[5] ? +m[5] : null};
+  /* with no opening verse the trailing number is a second chapter, not a verse
+     — "Psalm 23-24" means two psalms, and reading it as 23:24 would 404 */
+  if (r.verse == null && r.endVerse != null){ r.endChapter = r.endVerse; r.endVerse = null; }
+  else if (r.endVerse != null && r.endChapter == null) r.endChapter = chapter;
+  if (r.endChapter && r.endChapter > chapters) return {error: 'chapter', bi, asked: r.endChapter};
+  return {ref: r, how: f.how};
+}
+
+/* the reference alone, for the callers that only need somewhere to fetch from */
+function parseRef(str){ return readRef(str).ref || null; }
+
+/* Abbr.chapter[.verse][-verse|-Abbr.chapter.verse] — the NLT API's own grammar.
+   A range running past the end of a chapter is clamped by the service, so the
+   whole-chapter form needs no verse count to be correct */
+function nltRef(r){
+  const a = BOOK_CODES[r.bi][0];
+  if (r.verse == null)
+    return a + '.' + r.chapter + (r.endChapter && r.endChapter !== r.chapter ? '-' + r.endChapter : '');
+  let out = a + '.' + r.chapter + '.' + r.verse;
+  if (r.endVerse != null)
+    out += '-' + (r.endChapter !== r.chapter ? a + '.' + r.endChapter + '.' + r.endVerse : r.endVerse);
+  return out;
+}
+
+/* USFM passage id, as API.Bible addresses passages */
+function usfmRef(r){
+  const c = BOOK_CODES[r.bi][1];
+  if (r.verse == null)
+    return c + '.' + r.chapter + (r.endChapter && r.endChapter !== r.chapter ? '-' + c + '.' + r.endChapter : '');
+  let out = c + '.' + r.chapter + '.' + r.verse;
+  if (r.endVerse != null) out += '-' + c + '.' + r.endChapter + '.' + r.endVerse;
+  return out;
+}
+
+/* what the box under the passage field should show for what has been typed so
+   far: `rows` are the things that can be chosen, `note` is a line that only
+   explains. Kept apart from the drawing code because the interesting part is
+   the decision, not the DOM. */
+/* the size of what has been asked for, in one short phrase — the answer to
+   "how long is this?" before a word of it has been fetched. Terse on purpose:
+   it sits at the right-hand end of a single-line row. */
+/* the count of the chapter a single-chapter ask overruns, or 0 when it fits —
+   the one case where the number typed and the chapter disagree, and the only
+   reason either of the two lines below needs to know */
+function overrun(r){
+  if (r.verse == null || (r.endChapter || r.chapter) !== r.chapter) return 0;
+  const n = chVerses(r.bi, r.chapter);
+  return Math.max(r.verse, r.endVerse || 0) > n ? n : 0;
+}
+
+function refSpan(r){
+  const last = r.endChapter || r.chapter;
+  if (r.verse == null){
+    if (last === r.chapter) return 'whole chapter · ' + tally(chVerses(r.bi, r.chapter), 'verse');
+    let t = 0;
+    for (let c = r.chapter; c <= last; c++) t += chVerses(r.bi, c);
+    return tally(last - r.chapter + 1, 'chapter') + ' · ' + tally(t, 'verse');
+  }
+  /* inside one chapter, situate the ask in it: "verses 16-18 of 36" says both
+     what was asked and how much chapter there is */
+  if (last === r.chapter){
+    /* "verse 40 of 36" would be arithmetic nobody wants to read — when the ask
+       overruns, the note below says what happened instead */
+    if (overrun(r)) return 'past the end';
+    const to = r.endVerse != null && r.endVerse !== r.verse ? '-' + r.endVerse : '';
+    return (to ? 'verses ' + r.verse + to : 'verse ' + r.verse) + ' of ' + chVerses(r.bi, r.chapter);
+  }
+  return 'across ' + tally(last - r.chapter + 1, 'chapter');
+}
+
+/* the longer half of the same fact, for the line under the row, which wraps and
+   so has room for a sentence. Silent when refSpan has already said everything:
+   a note that only repeats the hint is a taller popover for nothing. */
+function refNote(r){
+  const book = CANON[r.bi][0];
+  const last = r.endChapter || r.chapter;
+  /* a range spanning chapters can't be sized in the hint, so spell the ends out */
+  if (r.verse != null && last !== r.chapter)
+    return escapeHtml(book + ' ' + r.chapter) + ' has ' + tally(chVerses(r.bi, r.chapter), 'verse') +
+           '; ' + escapeHtml(book + ' ' + last) + ' has ' + chVerses(r.bi, last) + '.';
+  /* asking past the last verse is worth naming — nothing downstream will say so */
+  const n = overrun(r);
+  if (n) return escapeHtml(book + ' ' + r.chapter) + ' ends at verse ' + n +
+           ', so this runs past it — you will get as far as there.';
+  return '';
+}
+
+/* the plain sentence, for when the hint slot is spoken for and the size would
+   otherwise go unsaid */
+function chapterFact(r){
+  const last = r.endChapter || r.chapter;
+  if (last !== r.chapter) return '';
+  return escapeHtml(CANON[r.bi][0] + ' ' + r.chapter) + ' has ' +
+         tally(chVerses(r.bi, r.chapter), 'verse') + '.';
+}
+
+function suggestRef(str){
+  const raw = String(str || '').trim();
+  if (!raw) return {rows: [], note: ''};
+  const read = readRef(raw);
+
+  /* a whole reference, understood: confirm it, say how much of it there is — and
+     say so when a spelling was mended, so nobody is quietly sent to a book they
+     didn't ask for */
+  if (read.ref){
+    const r = read.ref;
+    const fuzzy = read.how === 'fuzzy';
+    return {rows: [{
+      kind: fuzzy ? 'fix' : 'go',
+      label: proseRef(r),
+      hint: fuzzy ? 'did you mean' : refSpan(r),
+      ref: proseRef(r),
+      /* a mended spelling takes the hint slot for itself, so the size moves down
+         into the note rather than being dropped */
+    }], note: refNote(r) || (fuzzy ? chapterFact(r) : '')};
+  }
+
+  /* a chapter that book hasn't got. Worth saying plainly: the number is the
+     mistake, and how many there are is the fact that fixes it */
+  if (read.error === 'chapter')
+    return {rows: [], note: CANON[read.bi][0] + ' has ' + tally(CANON[read.bi][1], 'chapter') + '.'};
+
+  /* otherwise it is the book that isn't settled — offer what it could be. This
+     runs on a half-typed name too, which is what makes the list an autocomplete */
+  const head = BOOK_HEAD_RE.exec(raw);
+  const f = head ? findBook(head[1]) : {options: []};
+  const rest = head && head[2] ? head[2].trim() : '';
+  const opts = f.options.length ? f.options : (f.bi != null ? [f.bi] : []);
+  if (!opts.length)
+    return {rows: [], note: head ? 'No book of the Bible is spelled anything like <b>' +
+            escapeHtml(head[1].trim()) + '</b>.' : ''};
+  return {
+    rows: opts.slice(0, 8).map(bi => ({
+      kind: 'book', label: CANON[bi][0], book: CANON[bi][0], rest,
+      hint: tally(CANON[bi][1], 'chapter') + ' · ' + BOOK_VERSES[bi].toLocaleString() + ' verses',
+    })),
+    note: opts.length > 8 ? (opts.length - 8) + ' more — keep typing.' : '',
+  };
+}
+
+/* back to prose, for the ESV's free-text query and for what goes on screen */
+function proseRef(r){
+  const b = CANON[r.bi][0];
+  if (r.verse == null)
+    return b + ' ' + r.chapter + (r.endChapter && r.endChapter !== r.chapter ? '-' + r.endChapter : '');
+  let out = b + ' ' + r.chapter + ':' + r.verse;
+  if (r.endVerse != null)
+    out += '-' + (r.endChapter !== r.chapter ? r.endChapter + ':' + r.endVerse : r.endVerse);
+  return out;
+}
+
+/* ============================== fetching ============================== */
+const API = 'https://bible-api.com/';
+const NLT_API = 'https://api.nlt.to/api/passages';
+const ESV_API = 'https://api.esv.org/v3/passage/text/';
+const AB_API = 'https://api.scripture.api.bible/v1/';
+/* which service stands behind each kind of translation — named in error
+   notices, so "couldn't reach it" points at the host actually being called */
+const SRC_HOST = {bibleapi:'bible-api.com', nlt:'api.nlt.to', esv:'api.esv.org', apibible:'api.bible',
+                  custom:'your own text'};
+/* failures that are about the reader's credentials rather than about the text —
+   worth saying out loud, never worth papering over with another translation */
+const KEY_FAULTS = {nokey:1, badkey:1, esvopaque:1, quota:1, unlicensed:1};
+let loadSeq = 0;
+
+/* offline fallback rotation for the verse of the day, used when
+   labs.bible.org is unreachable — picked by date, rolling at local midnight;
+   the year offsets the order so it isn't the same calendar mapping every year */
+const VOTD = [
+  'John 3:16','Jeremiah 29:11','Philippians 4:13','Psalm 23:1-4','Romans 8:28',
+  'Isaiah 41:10','Proverbs 3:5-6','Matthew 6:33','Joshua 1:9','Psalm 46:1-3',
+  'Galatians 5:22-23','2 Timothy 1:7','Psalm 121:1-4','Romans 12:2','Ephesians 2:8-9',
+  'Isaiah 40:31','Matthew 11:28-30','Psalm 27:1','1 Corinthians 13:4-7','Hebrews 11:1',
+  'Zephaniah 3:17','John 14:6','Psalm 119:105','Micah 6:8','1 Peter 5:7',
+  'James 1:5','Colossians 3:23','Psalm 37:4-5','John 16:33','Romans 5:8',
+  'Deuteronomy 31:6','Psalm 91:1-2','Matthew 5:14-16','1 John 4:18-19','Isaiah 26:3',
+  'Proverbs 16:3','Psalm 34:8','John 15:5','2 Corinthians 5:17','Lamentations 3:22-23',
+  'Psalm 139:13-14','Habakkuk 3:17-18','Matthew 28:19-20','Acts 1:8','Romans 15:13',
+  'Ephesians 3:20-21','Psalm 19:14','1 Thessalonians 5:16-18','Hebrews 12:1-2','John 1:1-5',
+  'Genesis 1:1-3','Psalm 100','Isaiah 53:4-6','Luke 6:31','Revelation 21:4',
+  'Numbers 6:24-26','Psalm 51:10','Nahum 1:7','Job 19:25','Ruth 1:16',
+];
+function dailyRef(){
+  const now = new Date();
+  const doy = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 864e5);
+  return VOTD[(doy + now.getFullYear() * 31) % VOTD.length];
+}
+
+/* today's verse from bible.org's free VOTD API, retyped from bible-api.com so
+   the chosen translation applies; falls back to the local rotation if the VOTD
+   service is down, and to the NET text itself if bible-api can't serve the
+   reference (e.g. an Old Testament verse in Young's Literal) */
+async function fetchDaily(tr){
+  let net = null;
+  try {
+    const res = await fetch('https://labs.bible.org/api/?passage=votd&type=json');
+    if (res.ok){ const j = await res.json(); if (Array.isArray(j) && j.length) net = j; }
+  } catch(e){}
+  const ref = net
+    ? net[0].bookname + ' ' + net[0].chapter + ':' + net[0].verse +
+      (net.length > 1 ? '-' + net[net.length-1].verse : '')
+    : dailyRef();
+  try {
+    const p = await fetchPassage(ref, tr);
+    p.daily = true;
+    return p;
+  } catch(err){
+    /* the NET text is a fallback for a translation that hasn't got the verse,
+       not for a key that hasn't been pasted in — quietly serving another
+       translation would leave someone who chose the ESV wondering why the
+       daily verse never became the ESV. Those failures go to the reader. */
+    if (net && !KEY_FAULTS[err.message])
+      return { reference: ref, translation:'net', daily:true,
+               verses: net.map(v => ({verse:+v.verse, text:v.text})) };
+    throw err;
+  }
+}
+
+function showNotice(html){
+  els.refText.textContent = ''; els.trText.textContent = ''; els.pinCur.hidden = true;
+  els.starCur.hidden = true;
+  $('vodTag').hidden = true;
+  els.caret.hidden = true;
+  renderScribe();
+  els.text.innerHTML = '<div class="notice">'+html+'</div>';
+  chars = [];
+  renderAttribution(store.settings.translation, false);
+  showTyping();
+  renderHints();
+  reclaimFocus();   /* a bar button click can land here; don't leave focus on it */
+}
+
+/* every passage in the app comes through here. The public-domain translations
+   go to bible-api.com as prose; the modern three go to their publishers, which
+   need the reference in their own coded form — so those are parsed first and
+   refused early if the reference can't be placed in the canon. */
+async function fetchPassage(ref, tr){
+  const src = (TRANSLATIONS[tr] || {}).src || 'bibleapi';
+  if (src === 'bibleapi') return fetchBibleApi(ref, tr);
+  const r = parseRef(ref);
+  if (!r) throw new Error('unparsed');
+  if (src === 'nlt') return fetchNlt(r, tr);
+  if (src === 'esv') return fetchEsv(r, tr);
+  return fetchApiBible(r, tr);
+}
+
+async function fetchBibleApi(ref, tr){
+  const res = await fetch(API + encodeURIComponent(ref).replace(/%20/g,'+') + '?translation=' + tr);
+  if (!res.ok) throw new Error(res.status === 404 ? 'notfound' : 'http');
+  const j = await res.json();
+  if (!j.verses || !j.verses.length) throw new Error('notfound');
+  return { reference: j.reference, translation: tr, verses: j.verses };
+}
+
+/* ---------- NLT · Tyndale ----------
+   answers with a fragment of its own markup rather than JSON: one
+   <verse_export vn="n"> per verse, which may also carry the section heading,
+   psalm superscription, verse number and footnotes that precede its text. None
+   of those are words to be copied, so they come out before the text does.
+
+   The markup cannot be handed to an HTML parser whole. It leaves <p> tags
+   unclosed (John 3 does), and because <verse_export> is not a known element the
+   parser treats it as inline and nests it inside the open paragraph — so a
+   later verse ends up buried in an earlier one, or emptied out entirely and
+   dropped. The verse_export tags themselves are sound, so the passage is cut
+   into verses on those first, by hand, and only then is each verse parsed on
+   its own, where a stray tag can do no damage beyond its own verse. */
+const NLT_VERSE_RE = /<verse_export\b([^>]*)>([\s\S]*?)<\/verse_export>/gi;
+const NLT_DROP = 'h1,h2,h3,h4,h5,h6,.vn,.tn,.a-tn,.psa-title,.subhead,.footnotes';
+
+function nltVerseText(chunk){
+  /* a <template> parses a fragment without trying to make a document of it */
+  const tpl = document.createElement('template');
+  tpl.innerHTML = chunk;
+  tpl.content.querySelectorAll(NLT_DROP).forEach(n => n.remove());
+  const holder = document.createElement('div');
+  holder.appendChild(tpl.content);
+  /* poetry arrives as consecutive <p> lines; without turning the closing tags
+     into spaces the last word of a line would run into the first of the next */
+  const spaced = document.createElement('template');
+  spaced.innerHTML = holder.innerHTML
+    .replace(/<\/(p|div|h[1-6]|li|blockquote)>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, ' ');
+  const flat = document.createElement('div');
+  flat.appendChild(spaced.content);
+  return flat.textContent.replace(/\s+/g, ' ').trim();
+}
+
+function nltVerses(html){
+  const out = [];
+  let m;
+  NLT_VERSE_RE.lastIndex = 0;
+  while ((m = NLT_VERSE_RE.exec(html))){
+    const vn = /\bvn="(\d+)"/.exec(m[1]);
+    const text = nltVerseText(m[2]);
+    if (vn && text) out.push({verse: +vn[1], text});
+  }
+  return out;
+}
+
+async function fetchNlt(r, tr){
+  /* Tyndale serves this openly; a key is honoured if the reader registered one */
+  const k = store.keys.nlt;
+  const res = await fetch(NLT_API + '?ref=' + encodeURIComponent(nltRef(r)) +
+                          (k ? '&key=' + encodeURIComponent(k) : ''));
+  if (res.status === 401 || res.status === 403) throw new Error('badkey');
+  if (!res.ok) throw new Error('http');
+  const verses = nltVerses(await res.text());
+  if (!verses.length) throw new Error('notfound');
+  return { reference: proseRef(r), translation: tr, verses };
+}
+
+/* ---------- verse numbers in a run of prose ----------
+   the ESV and API.Bible both hand back the passage as one block of text with
+   bracketed verse numbers standing in front of each verse, so both are cut back
+   into verses the same way. API.Bible marks a cross-chapter passage [3:16], the
+   ESV plain [16]; the last number is the verse either way. */
+function splitMarkedVerses(text, r){
+  const marks = [];
+  const re = /\[\s*(?:(\d+)\s*:\s*)?(\d+)\s*\]/g;
+  let m;
+  while ((m = re.exec(text))) marks.push({verse: +m[2], from: m.index, to: re.lastIndex});
+  if (!marks.length){
+    /* a lone verse can come back unmarked — its number is the one we asked for */
+    const t = text.replace(/\s+/g, ' ').trim();
+    return t ? [{verse: (r && r.verse != null) ? r.verse : 1, text: t}] : [];
+  }
+  return marks
+    .map((mk, i) => ({
+      verse: mk.verse,
+      text: text.slice(mk.to, i + 1 < marks.length ? marks[i+1].from : text.length)
+                .replace(/\s+/g, ' ').trim(),
+    }))
+    .filter(v => v.text);
+}
+
+/* ---------- ESV · Crossway ----------
+   everything that isn't the text itself is switched off: references, headings,
+   footnotes, the short copyright tag and poetry indentation. Verse numbers stay,
+   because they are the only thing marking where one verse ends. */
+const ESV_OPTS = [
+  'include-passage-references=false', 'include-verse-numbers=true',
+  'include-first-verse-numbers=true', 'include-footnotes=false',
+  'include-footnote-body=false', 'include-headings=false',
+  'include-short-copyright=false', 'include-selahs=false',
+  'indent-poetry=false', 'indent-paragraphs=0', 'indent-declares=0',
+  'indent-psalm-doxology=0', 'line-length=0',
+].join('&');
+
+async function fetchEsv(r, tr){
+  const k = store.keys.esv;
+  if (!k) throw new Error('nokey');
+  /* Crossway answers the CORS preflight and allows the Authorization header, so
+     a good request comes back readable — but their error responses carry no
+     CORS headers at all, which the browser can only report as a failed fetch
+     with no status behind it. A rejection here is therefore ambiguous by
+     construction: almost always a key the server refused, occasionally the
+     network. The notice for it has to own up to both. */
+  let res;
+  try {
+    res = await fetch(ESV_API + '?q=' + encodeURIComponent(proseRef(r)) + '&' + ESV_OPTS,
+                      {headers: {Authorization: 'Token ' + k}});
+  } catch(e){ throw new Error('esvopaque'); }
+  if (res.status === 401 || res.status === 403) throw new Error('badkey');
+  if (res.status === 429) throw new Error('quota');
+  if (!res.ok) throw new Error('http');
+  const j = await res.json();
+  const verses = splitMarkedVerses((j.passages || []).join(' '), r);
+  if (!verses.length) throw new Error('notfound');
+  return { reference: j.canonical || proseRef(r), translation: tr, verses };
+}
+
+/* ---------- NIV · API.Bible ---------- */
+async function abGet(path){
+  const k = store.keys.apibible;
+  if (!k) throw new Error('nokey');
+  const res = await fetch(AB_API + path, {headers: {'api-key': k}});
+  if (res.status === 401 || res.status === 403) throw new Error('badkey');
+  if (res.status === 429) throw new Error('quota');
+  if (res.status === 404) throw new Error('notfound');
+  if (!res.ok) throw new Error('http');
+  return res.json();
+}
+
+/* the NIV's id on API.Bible depends on which licences the reader's own account
+   holds, so it is read out of their catalogue once and then remembered. An
+   account that has not accepted the NIV agreement simply won't list it. */
+async function apiBibleId(){
+  if (store.keys.nivBible) return store.keys.nivBible;
+  const list = (await abGet('bibles?language=eng')).data || [];
+  const hit = list.find(b => (b.abbreviationLocal || b.abbreviation || '').toUpperCase() === 'NIV')
+           || list.find(b => /new international version/i.test((b.name || '') + ' ' + (b.nameLocal || '')));
+  if (!hit) throw new Error('unlicensed');
+  store.keys.nivBible = hit.id; save();
+  return hit.id;
+}
+
+const AB_OPTS = ['content-type=text', 'include-notes=false', 'include-titles=false',
+                 'include-chapter-numbers=false', 'include-verse-numbers=true',
+                 'include-verse-spans=false'].join('&');
+
+async function fetchApiBible(r, tr){
+  const id = await apiBibleId();
+  /* /passages addresses verse ranges and will not take a bare chapter id, so a
+     whole chapter — which is every fetch the scribe makes — goes to /chapters */
+  const whole = r.verse == null && !r.endChapter;
+  const j = await abGet('bibles/' + id + (whole ? '/chapters/' : '/passages/') +
+                        usfmRef(r) + '?' + AB_OPTS);
+  const d = j.data || {};
+  const verses = splitMarkedVerses(String(d.content || ''), r);
+  if (!verses.length) throw new Error('notfound');
+  return { reference: d.reference || proseRef(r), translation: tr, verses };
+}
+
+/* ============================== stored text ==============================
+   Chapters already fetched are written down, so that resuming the scribe — or
+   stepping back along the trail — doesn't ask a publisher for text it has
+   already handed over.
+
+   How much may be kept is a licence condition rather than a tuning knob.
+   Crossway allows a local copy of no more than 500 verses, or half of any one
+   book, whichever is less, and asks that it be cleared from time to time so the
+   text stays current. The budget below sits under both of those, and applies to
+   every translation alike — one rule is easier to keep than two, and the
+   public-domain texts lose nothing by being held to it.
+
+   It lives under its own storage key, outside `store`, so it can never ride
+   along in an export. */
+const TEXT_KEY = 'versewright.text.v1';
+const TEXT_MAX_VERSES = 400;        /* per translation, under Crossway's 500 */
+const TEXT_MAX_AGE = 30 * 864e5;    /* a month, then a chapter is asked for afresh */
+
+function loadText(){
+  try {
+    const j = JSON.parse(localStorage.getItem(TEXT_KEY) || '{}');
+    return (j && typeof j === 'object') ? j : {};
+  } catch(e){ return {}; }
+}
+function saveText(c){
+  /* out of room is not a failure worth surfacing: the store is a courtesy to
+     the publishers' servers, never something the app depends on */
+  try { localStorage.setItem(TEXT_KEY, JSON.stringify(c)); } catch(e){}
+}
+const textKey = (tr, bi, chapter) => tr + '|' + bi + '|' + chapter;
+
+/* how many chapters of one book may be written down. Half of any one book is
+   the ceiling, counted in chapters because per-book verse totals aren't known
+   here — which makes it the stricter of the two readings. A single-chapter book
+   has no half to take, so its text is never stored: the in-memory slot below
+   carries it for as long as the quill is inside it, which is all that scribe
+   mode actually needs. */
+const bookChapterCap = bi => Math.floor(CANON[bi][1] / 2);
+
+/* drops what is stale, then what is over budget — least recently used first,
+   per book against its half, and per translation against the verse ceiling */
+function pruneText(c){
+  const now = Date.now();
+  const rows = [];
+  for (const k in c){
+    const e = c[k];
+    const bi = +String(k).split('|')[1];
+    if (!e || !Array.isArray(e.v) || !CANON[bi] || now - (e.t || 0) > TEXT_MAX_AGE){
+      delete c[k];
+      continue;
+    }
+    rows.push({k, tr: String(k).split('|')[0], bi, used: e.u || e.t || 0, n: e.v.length});
+  }
+  rows.sort((a, b) => b.used - a.used);      /* most recently used first: kept */
+  const perBook = {}, perTr = {};
+  for (const r of rows){
+    const bk = r.tr + '|' + r.bi;
+    const book = (perBook[bk] || 0) + 1, tot = (perTr[r.tr] || 0) + r.n;
+    if (book > bookChapterCap(r.bi) || tot > TEXT_MAX_VERSES){ delete c[r.k]; continue; }
+    perBook[bk] = book; perTr[r.tr] = tot;
+  }
+  return c;
+}
+
+function storedChapter(book, chapter, tr){
+  const bi = BOOK_ALIAS[normBook(book)];
+  if (bi == null) return null;
+  const c = loadText();
+  const e = c[textKey(tr, bi, chapter)];
+  if (!e || !Array.isArray(e.v) || Date.now() - (e.t || 0) > TEXT_MAX_AGE) return null;
+  e.u = Date.now(); saveText(c);      /* touched, so it outlives colder chapters */
+  return e.v;
+}
+
+function storeChapter(book, chapter, tr, verses){
+  const bi = BOOK_ALIAS[normBook(book)];
+  if (bi == null || bookChapterCap(bi) < 1) return;
+  const c = loadText();
+  const now = Date.now();
+  c[textKey(tr, bi, chapter)] = {v: verses, t: now, u: now};
+  saveText(pruneText(c));
+}
+
+function textStats(){
+  const c = loadText();
+  let chapters = 0, verses = 0;
+  for (const k in c){
+    const e = c[k];
+    if (e && Array.isArray(e.v)){ chapters++; verses += e.v.length; }
+  }
+  return {chapters, verses};
+}
+
+/* the chapter behind the passage on screen, kept so that nudging the verse
+   count re-slices what is already in hand instead of going back to the network
+   for text it just had. One slot is enough — it exists for the run of clicks
+   along 1·2·3·5·10, which never leaves the chapter */
+let heldChapter = null;   // {key, verses}
+/* the passage exactly as it was typed, kept so a failure can be explained in
+   terms of what was asked for rather than what it was turned into */
+let lastRefTyped = '';
+const chapterKey = (book, chapter, tr) => book + '|' + chapter + '|' + tr;
+
+function heldVerses(book, chapter, tr){
+  return (heldChapter && heldChapter.key === chapterKey(book, chapter, tr)) ? heldChapter.verses : null;
+}
+
+async function getChapter(book, chapter, tr){
+  const held = heldVerses(book, chapter, tr);
+  if (held) return held;
+  const stored = storedChapter(book, chapter, tr);
+  if (stored){
+    heldChapter = {key: chapterKey(book, chapter, tr), verses: stored};
+    return stored;
+  }
+  /* the whole chapter at once, so a window running past its end simply yields
+     the verses that remain instead of 404ing on an over-long range */
+  const ch = await fetchPassage(book + ' ' + chapter, tr);
+  heldChapter = {key: chapterKey(book, chapter, tr), verses: ch.verses};
+  storeChapter(book, chapter, tr, ch.verses);
+  return ch.verses;
+}
+
+/* window `count` verses out of a chapter, starting at the anchor. mayBackUp
+   only on a fresh draw, so a new test comes out full length; a re-slice reaches
+   forward alone, taking as much of the chapter as is left */
+function windowChapter(verses, rv, count, mayBackUp){
+  /* >= rather than === so a translation that omits a verse doesn't strand the anchor */
+  let i = verses.findIndex(v => v.verse >= rv.verse);
+  if (i < 0) i = 0;
+  if (mayBackUp && count > 1 && i > verses.length - count) i = Math.max(0, verses.length - count);
+  const slice = verses.slice(i, i + count);
+  const first = slice[0].verse, last = slice[slice.length-1].verse;
+  return {
+    reference: rv.book + ' ' + rv.chapter + ':' + (first === last ? first : first + '-' + last),
+    verses: slice,
+    /* hold the anchor still across re-slices rather than letting it creep to
+       whatever the last window happened to start on */
+    random: {book: rv.book, chapter: rv.chapter, verse: mayBackUp ? first : rv.verse},
+  };
+}
+
+/* with no anchor this draws a fresh verse; given one (the passage already on
+   screen) it re-slices that same chapter, so changing the verse count resizes
+   the window instead of dealing a different passage */
+async function fetchRandom(tr, count, anchor){
+  let rv = anchor;
+  /* the random-verse endpoint is bible-api.com's alone, so for a translation it
+     doesn't carry we draw the anchor from the WEB and then fetch that same
+     reference from wherever the chosen translation actually lives */
+  const ownAnchor = ((TRANSLATIONS[tr] || {}).src || 'bibleapi') === 'bibleapi';
+  if (!rv){
+    const res = await fetch(API + 'data/' + (ownAnchor ? tr : 'web') + '/random');
+    if (!res.ok) throw new Error('http');
+    rv = (await res.json()).random_verse;
+  }
+  try {
+    const verses = await getChapter(rv.book, rv.chapter, tr);
+    return Object.assign({translation: tr}, windowChapter(verses, rv, count, !anchor));
+  }
+  catch(e){
+    if (anchor) throw e;      /* re-slicing has no single-verse text to fall back on */
+    /* the anchor carries its own text, but only in the translation it came from
+       — falling back to it under another translation's name would be a lie */
+    if (!ownAnchor) throw e;
+    return { reference: rv.book + ' ' + rv.chapter + ':' + rv.verse, translation: tr,
+             verses: [{verse: rv.verse, text: rv.text}],
+             random: {book: rv.book, chapter: rv.chapter, verse: rv.verse} };
+  }
+}
+
+/* ============================== trail ==============================
+   every passage put on screen is kept in a short in-memory log so an
+   accidental tab is recoverable. It is a log, not browser history: stepping
+   back and then loading something new appends rather than truncating, so
+   nothing already seen is ever thrown away. Lives for the session only —
+   the verses are held in memory rather than written to storage. */
+const TRAIL_MAX = 25;
+let trail = [];
+let trailIdx = -1;
+
+function sameAnchor(a, b){
+  return !!(a && b && a.book === b.book && a.chapter === b.chapter && a.verse === b.verse);
+}
+
+function pushTrail(p){
+  /* the same reference re-rendered (a translation swap, or a repeat) refreshes
+     the entry in place instead of stacking a near-duplicate — and so does a
+     window resized around the same anchor, which is one passage being read
+     longer or shorter, not five passages to step back through */
+  const cur = trailIdx >= 0 ? trail[trailIdx] : null;
+  if (cur && (cur.reference === p.reference || sameAnchor(cur.random, p.random))){
+    trail[trailIdx] = p; renderTrail(); return;
+  }
+  trail.push(p);
+  if (trail.length > TRAIL_MAX) trail.shift();
+  trailIdx = trail.length - 1;
+  renderTrail();
+}
+
+function goTrail(delta){
+  const i = trailIdx + delta;
+  if (i < 0 || i >= trail.length) return false;
+  trailIdx = i;
+  loadSeq++;                     /* a fetch still in flight must not overwrite this */
+  renderPassage(trail[i], true);
+  renderTrail();                 /* fromTrail skips pushTrail, so refresh the controls here */
+  reclaimFocus();
+  return true;
+}
+
+function renderTrail(){
+  const back = trailIdx > 0, fwd = trailIdx < trail.length - 1;
+  $('navBack').disabled = !back;
+  $('navFwd').disabled = !fwd;
+  const n = trail.length - 1 - trailIdx;
+  $('backTag').hidden = n <= 0;
+  $('backTag').textContent = '↩ ' + n + ' back';
+}
+
+/* ============================== scribe ==============================
+   the quill sits at one place in the canon and only moves when a passage is
+   actually finished — the text advances because it was copied, not because it
+   was skipped past */
+function scribePos(){
+  const st = store.scribe;
+  if (st.done) return {done:true, pct:100, chDone:TOTAL_CH, ref:'Revelation 22'};
+  const chDone = CANON_CUM[st.book] + (st.chapter - 1);
+  return {done:false, pct:100*chDone/TOTAL_CH, chDone,
+          ref: CANON[st.book][0] + ' ' + st.chapter + ':' + st.verse};
+}
+
+async function fetchScribe(tr, count){
+  const st = store.scribe;
+  const book = CANON[st.book][0];
+  const verses = await getChapter(book, st.chapter, tr);
+  /* >= rather than === so a translation that omits a verse doesn't strand the quill */
+  let i = verses.findIndex(v => v.verse >= st.verse);
+  if (i < 0) i = 0;
+  const slice = verses.slice(i, i + count);
+  const after = verses[i + slice.length];
+  const first = slice[0].verse, last = slice[slice.length-1].verse;
+  return {
+    reference: book + ' ' + st.chapter + ':' + (first === last ? first : first + '-' + last),
+    translation: tr, verses: slice,
+    scribe: {book: st.book, chapter: st.chapter, nextVerse: after ? after.verse : null},
+  };
+}
+
+/* called once a scribe passage is completed */
+function advanceScribe(sc){
+  const st = store.scribe;
+  /* if the quill was moved mid-run (a jump, or a reset), that wins over the
+     run that was already in flight */
+  if (st.done || st.book !== sc.book || st.chapter !== sc.chapter) return;
+  if (sc.nextVerse){ st.verse = sc.nextVerse; return; }
+  st.verse = 1;
+  st.chapter++;
+  if (st.chapter > CANON[st.book][1]){ st.book++; st.chapter = 1; }
+  if (st.book >= CANON.length){
+    st.book = CANON.length - 1;
+    st.chapter = CANON[st.book][1];
+    st.done = true;
+  }
+}
+
+function renderScribe(){
+  const on = store.settings.mode === 'scribe';
+  $('scribeLine').hidden = !on;
+  const p = scribePos();
+  const pct = p.pct.toFixed(p.pct && p.pct < 1 ? 2 : 1) + '%';
+  if (on){
+    $('sprogFill').style.width = p.pct + '%';
+    $('sprogText').innerHTML = p.done
+      ? 'the whole canon copied'
+      : 'chapter ' + (p.chDone + 1) + ' of ' + TOTAL_CH.toLocaleString() +
+        ' <span class="pos">· ' + pct + '</span>';
+  }
+  $('sdPos').textContent = p.done ? 'Finished — Revelation 22' : 'The quill rests at ' + p.ref;
+  $('sdFill').style.width = p.pct + '%';
+  $('sdPct').textContent = p.done
+    ? TOTAL_CH.toLocaleString() + ' of ' + TOTAL_CH.toLocaleString() + ' chapters · 100%'
+    : p.chDone.toLocaleString() + ' of ' + TOTAL_CH.toLocaleString() + ' chapters copied · ' + pct;
+  const sel = $('scribeJump');
+  if (sel.value !== String(store.scribe.book)) sel.value = String(store.scribe.book);
+}
+
+async function newTest(opts){
+  const seq = ++loadSeq;
+  const s = store.settings;
+  const anchor = (opts && opts.keepAnchor && current && current.random) ? current.random : null;
+  /* only announce a fetch that is actually taking a moment. Re-slicing a held
+     chapter renders in the same breath, and blanking the passage on the way to
+     redrawing it one verse longer reads as a reload it never was */
+  const notice = setTimeout(()=>{ if (seq === loadSeq) showNotice('fetching the text…'); }, 150);
+  try {
+    let p;
+    if (s.mode === 'passage'){
+      const typed = (els.refInput.value || s.passageRef || '').trim();
+      if (!typed){ showNotice('Enter a passage above — <b>John 3:16-18</b>, <b>Psalm 23</b>, a whole chapter like <b>Luke 15</b>, or a range across two: <b>Matthew 5:1-6:4</b>. <span class="hint">Short forms are fine — <b>jn 3:16</b>, <b>ps 23</b>, <b>1 thess 5</b> — and press <b>↓</b> in the box to see what it makes of what you have typed.</span>'); return; }
+      /* one grammar for every translation. Whatever was typed is resolved here
+         and sent on in canonical form, so "1 thess 5:16" means the same thing
+         whether the text comes from bible-api or from a publisher — and the
+         field is set to what was understood, which is the plainest possible
+         confirmation that a shorthand or a misspelling landed where intended.
+         If it can't be resolved the raw text goes through untouched: bible-api
+         reads spellings this app has never heard of, and that shouldn't stop. */
+      lastRefTyped = typed;
+      const read = readRef(typed);
+      const ref = read.ref ? proseRef(read.ref) : typed;
+      if (read.ref && els.refInput.value.trim() !== ref) els.refInput.value = ref;
+      s.passageRef = ref; save();
+      p = await fetchPassage(ref, s.translation);
+    } else if (s.mode === 'pinned'){
+      if (!store.pins.length){ showNotice('No bookmarks yet. Pin a passage with the <b>⚑ pin</b> button and it will appear under <b>bookmarks</b> in the <b>desk</b>.'); return; }
+      const pin = nextPin();
+      /* a bookmark of your own text carries the words with it; there is nothing
+         to go and get */
+      p = pinPassage(pin) || await fetchPassage(pin.ref, pin.translation || s.translation);
+    } else if (s.mode === 'scribe'){
+      if (store.scribe.done){
+        showNotice('<b>The whole canon, copied.</b> Genesis to Revelation, ' + TOTAL_CH.toLocaleString() +
+                   ' chapters in your own hand. <span class="hint">Open the <b>desk</b> and begin again at Genesis from <b>scribe</b>.</span>');
+        return;
+      }
+      p = await fetchScribe(s.translation, s.count);
+    } else if (s.mode === 'custom'){
+      const text = cleanText(s.customText || '').slice(0, CUSTOM_MAX);
+      /* nothing written yet: the editor is the mode, until there is something
+         to type */
+      if (!text){ openCustomEditor(); return; }
+      p = customPassage(text, s.customTitle, s.customText);
+    } else if (s.mode === 'daily'){
+      p = await fetchDaily(s.translation);
+    } else {
+      p = await fetchRandom(s.translation, s.count, anchor);
+    }
+    if (seq !== loadSeq) return; // superseded by a newer request
+    renderPassage(p);
+  } catch(err){
+    if (seq === loadSeq) handleLoadError(err);
+  } finally {
+    clearTimeout(notice);
+  }
+}
+
+/* load a specific reference in the current translation (translation switches, bookmarks) */
+async function loadRef(ref, daily, random){
+  const seq = ++loadSeq;
+  showNotice('fetching the text…');
+  try {
+    const p = await fetchPassage(ref, store.settings.translation);
+    p.daily = !!daily;
+    if (random) p.random = random;   /* a translation swap must not cost the anchor */
+    if (seq === loadSeq) renderPassage(p);
+  } catch(err){
+    if (seq === loadSeq) handleLoadError(err);
+  }
+}
+
+function handleLoadError(err){
+  const tr = store.settings.translation;
+  const trName = TR_NAMES[tr] || tr;
+  const host = SRC_HOST[(TRANSLATIONS[tr] || {}).src || 'bibleapi'];
+  const code = err && err.message;
+  const openKeys = '<span class="hint">Press <b>desk</b> at the top of the screen, then <b>sources</b> — ' +
+                   'it walks you through getting one, step by step. It is free and takes about three minutes.</span>';
+  /* a failed fetch never advances the quill, but in scribe mode that is worth
+     saying — the fear is that a lost passage costs a place in the canon */
+  const quill = store.settings.mode === 'scribe' ? ' The quill has not moved.' : '';
+
+  if (code === 'nokey')
+    showNotice('The ' + trName + ' belongs to its publisher, who lends it out one passage at a time — ' +
+               'so it needs a key of your own. ' + openKeys);
+  else if (code === 'badkey')
+    showNotice('<em>' + host + '</em> turned that key down.' + quill + ' <span class="hint">Check it ' +
+               'under <b>sources</b> in the <b>desk</b> — and that the application it belongs to is ' +
+               'still active.</span>');
+  else if (code === 'quota')
+    showNotice('<em>' + host + '</em> says the key has been used up for now.' + quill +
+               ' <span class="hint">Free tiers are metered by the day — a public-domain ' +
+               'translation will carry you until it resets.</span>');
+  else if (code === 'esvopaque')
+    showNotice('<em>api.esv.org</em> refused that request, and doesn’t say why — its error ' +
+               'replies are unreadable from a browser.' + quill + ' <span class="hint">Nearly ' +
+               'always the key: check it under <b>sources</b>, and that the application is still ' +
+               'active on your Crossway account. Otherwise it is the connection — press <b>tab</b> ' +
+               'to retry.</span>');
+  else if (code === 'unlicensed')
+    showNotice('That key works, but its account doesn’t carry the NIV. ' +
+               '<span class="hint">The NIV is non-commercial only: sign in at <b>api.bible</b> and ' +
+               'accept the NIV agreement, then press <b>tab</b> to retry.</span>');
+  else if (code === 'unparsed' || code === 'notfound'){
+    /* say what was actually wrong with it, rather than reciting the grammar and
+       leaving the reader to spot which part of theirs broke it */
+    const read = readRef(lastRefTyped);
+    if (read.error === 'chapter'){
+      const n = CANON[read.bi][1];
+      showNotice('<b>' + escapeHtml(CANON[read.bi][0]) + '</b> has ' + n +
+                 (n === 1 ? ' chapter' : ' chapters') + ', so there is no chapter ' + read.asked + '.' +
+                 (n === 1 ? ' <span class="hint">It is a single-chapter book — try <b>' +
+                            escapeHtml(CANON[read.bi][0]) + ' 1:' + read.asked + '</b>.</span>' : ''));
+    } else if (read.error === 'book'){
+      /* two different failures wear the same error code: a name that matches
+         nothing, and a name that matches too much. Saying "no book is spelled
+         Ez" to someone who typed a real abbreviation is just wrong. */
+      const typed = escapeHtml(read.typed || lastRefTyped);
+      const opts = (read.options || []).map(i => '<b>' + escapeHtml(CANON[i][0]) + '</b>');
+      if (opts.length > 1)
+        showNotice('<b>' + typed + '</b> could be ' + opts.slice(0, 4).join(' or ') +
+                   '. <span class="hint">Type a letter or two more and the box will settle on one.</span>');
+      else if (opts.length)
+        showNotice('No book is spelled <b>' + typed + '</b>. <span class="hint">Did you mean ' +
+                   opts[0] + '?</span>');
+      else
+        showNotice('No book of the Bible is spelled anything like <b>' + typed + '</b>. ' +
+                   '<span class="hint">Press <b>↓</b> in the passage box and it will list the books ' +
+                   'as you type.</span>');
+    } else if (code === 'unparsed' || read.error === 'shape'){
+      showNotice('That didn’t read as a passage. <span class="hint">It wants a book and a chapter — ' +
+                 '<b>Luke 15</b> — with verses if you like: <b>John 3:16</b>, <b>John 3:16-18</b>, ' +
+                 '<b>Matthew 5:1-6:4</b>. Short forms are fine.</span>');
+    } else if (store.settings.mode === 'scribe'){
+      showNotice('The ' + trName + ' has no text for <b>' + escapeHtml(scribePos().ref) + '</b>. ' +
+                 '<span class="hint">Young’s Literal covers the New Testament only — switch translation, ' +
+                 'or jump the quill from <b>scribe</b> in the <b>desk</b>.</span>');
+    } else {
+      showNotice('The ' + trName + ' has no text there. <span class="hint">Some translations skip ' +
+                 'verses that others number, and Young’s Literal covers the New Testament only — ' +
+                 'try another translation, or a neighbouring verse.</span>');
+    }
+  }
+  else
+    showNotice('Couldn’t reach <em>' + host + '</em>. <span class="hint">Check your connection, then press <b>tab</b> to retry.</span>');
+}
+
+function repeatTest(){
+  if (!current) { newTest(); return; }
+  renderPassage(current, true);
+}
+
+/* ============================== pins ============================== */
+/* a bookmark is identified by what it points at. A reference and translation is
+   enough for scripture; text the reader wrote has no reference to be known by,
+   so it is keyed by a hash of the text itself. Both shapes are compared through
+   the same key, which is what lets custom text be bookmarked like anything
+   else without a second code path through the whole feature. */
+function pinKey(p){
+  if (!p) return '';
+  return p.translation === 'custom'
+    ? 'custom|' + textHash(p.text || '')
+    : (p.ref + '|' + p.translation).toLowerCase();
+}
+/* the same key, computed from a passage on screen rather than a stored pin */
+function passageKey(p){
+  if (!p) return '';
+  return p.custom
+    ? 'custom|' + textHash(p.custom.text || '')
+    : (p.reference + '|' + p.translation).toLowerCase();
+}
+function findPinFor(p){
+  const k = passageKey(p);
+  return k ? store.pins.find(x => pinKey(x) === k) : null;
+}
+/* a bookmark turned back into something renderable */
+function pinPassage(p){
+  if (p.translation !== 'custom') return null;
+  const title = p.ref === 'Your own text' ? '' : p.ref;
+  return customPassage(p.text || '', title, p.raw || p.text || '');
+}
+
+/* the pool the pinned source deals from — starred only when that is asked for,
+   falling back to every bookmark while nothing is starred yet */
+function pinPool(){
+  const starred = store.pins.filter(p => p.starred);
+  return (store.settings.starredOnly && starred.length) ? starred : store.pins;
+}
+
+/* pinned mode cycles through the bookmarks in shuffled order, visiting every
+   pin once before reshuffling; pins added mid-cycle join the next shuffle */
+let pinDeck = [];
+function nextPin(){
+  const keys = pinPool().map(pinKey);
+  pinDeck = pinDeck.filter(k => keys.includes(k));   // drop deleted pins
+  if (!pinDeck.length){
+    pinDeck = keys.slice();
+    for (let i = pinDeck.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [pinDeck[i], pinDeck[j]] = [pinDeck[j], pinDeck[i]];
+    }
+    /* don't deal the passage that was just typed right back on a reshuffle */
+    if (pinDeck.length > 1 && current && pinDeck[0] === passageKey(current))
+      pinDeck.push(pinDeck.shift());
+  }
+  const k = pinDeck.shift();
+  return store.pins.find(p => pinKey(p) === k);
+}
+function togglePin(){
+  if (!current) return;
+  const k = passageKey(current);
+  if (findPinFor(current)){
+    store.pins = store.pins.filter(p => pinKey(p) !== k);
+  } else if (current.custom){
+    /* the text travels with the bookmark — there is nowhere to fetch it back from */
+    store.pins.push({ref: current.reference, translation: 'custom',
+                     text: current.custom.text, raw: current.custom.raw});
+  } else {
+    store.pins.push({ref: current.reference, translation: current.translation});
+  }
+  save(); updatePinBtn(); updatePinResBtn(); updateStarBtn(); renderPins();
+}
+
+/* starring marks a bookmark as one to keep close — for memorising, or for
+   coming back to often; it only applies to a passage that is already pinned */
+function toggleStar(){
+  if (!current) return;
+  const p = findPinFor(current);
+  if (!p) return;
+  p.starred = !p.starred;
+  save(); updateStarBtn(); renderPins();
+}
+function updateStarBtn(){
+  if (!current) return;
+  const p = findPinFor(current);
+  const on = !!(p && p.starred);
+  els.starCur.hidden = !p;
+  els.starCur.textContent = on ? '★' : '☆';
+  els.starCur.classList.toggle('on', on);
+  els.starCur.title = on ? 'remove the star' : 'star this bookmark — keep it close for memorising';
+  els.starCur.setAttribute('aria-label', on ? 'unstar this bookmark' : 'star this bookmark');
+  els.starCur.setAttribute('aria-pressed', on ? 'true' : 'false');
+  const rb = $('btnStarRes');
+  rb.hidden = !p;
+  rb.textContent = on ? '★ starred' : '☆ star it';
+  rb.classList.toggle('on', on);
+  rb.setAttribute('aria-pressed', on ? 'true' : 'false');
+}
+function updatePinBtn(){
+  if (!current) return;
+  const on = !!findPinFor(current);
+  els.pinCur.textContent = on ? '⚑ pinned' : '⚑ pin';
+  els.pinCur.classList.toggle('pinned', on);
+}
+function updatePinResBtn(){
+  if (!current) return;
+  $('btnPinRes').textContent = findPinFor(current) ? '⚑ pinned' : '⚑ pin it';
+}
+async function loadPin(p){
+  closeDrawer();
+  const seq = ++loadSeq;
+  /* nothing to fetch for a bookmark that carries its own text: adopt it as the
+     working custom text and switch to that mode, so ✎ edit and a later re-pin
+     act on the thing actually on screen */
+  const own = pinPassage(p);
+  if (own){
+    store.settings.mode = 'custom';
+    store.settings.customText = p.raw || p.text || '';
+    store.settings.customTitle = (p.ref === 'Your own text') ? '' : p.ref;
+    save(); syncBar();
+    renderPassage(own);
+    return;
+  }
+  showNotice('fetching the text…');
+  try { const pass = await fetchPassage(p.ref, p.translation || store.settings.translation);
+        if (seq === loadSeq) renderPassage(pass); }
+  catch(e){ if (seq === loadSeq) showNotice('Couldn’t load that bookmark right now.'); }
+}
+
+function filteredPins(){
+  const q = ($('pinSearch').value || '').trim().toLowerCase();
+  if (!q) return store.pins;
+  /* the words of a custom bookmark are searchable too — its title may be empty,
+     and the text is the only thing that identifies it */
+  return store.pins.filter(p =>
+    (p.ref + ' ' + (p.translation || '') + ' ' + (p.text || '')).toLowerCase().includes(q));
+}
+
+function starCount(){ return store.pins.filter(p => p.starred).length; }
+
+function syncStarOnly(){
+  const b = $('starOnly'), n = starCount(), on = !!store.settings.starredOnly;
+  b.hidden = !store.pins.length;
+  b.classList.toggle('on', on);
+  b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  b.querySelector('.lbl').textContent = (on && !n)
+    ? 'starred only — nothing starred yet, so pinned draws from all'
+    : 'in pinned mode, draw only from starred' + (n ? ' (' + n + ')' : '');
+}
+
+/* renderPins() replaces the whole list, so the control that was just pressed
+   no longer exists — find its replacement and hand focus back */
+function refocusPinRow(p){
+  const row = [...els.pinList.querySelectorAll('.pinrow')].find(r => r.dataset.k === pinKey(p));
+  if (row) row.querySelector('.star').focus();
+}
+function focusDrawerTop(){
+  const se = $('pinSearch');
+  (se.hidden ? $('drawerClose') : se).focus();
+}
+
+function pinRow(p){
+  const row = document.createElement('div'); row.className = 'pinrow';
+  row.dataset.k = pinKey(p);
+  const on = !!p.starred;
+  const star = document.createElement('button'); star.className = 'star';
+  star.textContent = on ? '★' : '☆';
+  star.classList.toggle('on', on);
+  star.title = on ? 'remove the star' : 'star this bookmark';
+  star.setAttribute('aria-pressed', on ? 'true' : 'false');
+  star.setAttribute('aria-label', (on ? 'unstar ' : 'star ') + p.ref);
+  star.addEventListener('click', ()=>{
+    p.starred = !p.starred;
+    save(); renderPins(); updateStarBtn();
+    refocusPinRow(p);
+  });
+  const btn = document.createElement('button'); btn.className = 'pr';
+  /* an untitled custom bookmark is shown by its opening words, since there is
+     no reference to name it by */
+  const own = p.translation === 'custom';
+  const label = own && p.ref === 'Your own text'
+    ? '“' + cleanText(p.text || '').slice(0, 38) + '…”'
+    : p.ref;
+  btn.innerHTML = escapeHtml(label) + '<small>' +
+    (own ? 'YOUR OWN TEXT' : escapeHtml((p.translation||'').toUpperCase())) + ' · type it</small>';
+  btn.addEventListener('click', ()=> loadPin(p));
+  const del = document.createElement('button'); del.className = 'del'; del.textContent = '✕';
+  del.setAttribute('aria-label','remove bookmark');
+  del.addEventListener('click', ()=>{
+    store.pins = store.pins.filter(x => pinKey(x) !== pinKey(p));
+    save(); renderPins(); updatePinBtn(); updatePinResBtn(); updateStarBtn();
+    focusDrawerTop();   /* the row is gone; don't drop focus to <body> */
+  });
+  row.appendChild(star); row.appendChild(btn); row.appendChild(del);
+  return row;
+}
+
+function pinGroup(label){
+  const h = document.createElement('div'); h.className = 'pgroup'; h.textContent = label;
+  return h;
+}
+
+function renderPins(){
+  els.pinCount.textContent = store.pins.length ? ' · ⚑' + store.pins.length : '';
+  $('pinSearch').hidden = !store.pins.length;
+  syncStarOnly();
+  if (!store.pins.length){
+    $('pinMatch').hidden = true;
+    els.pinList.innerHTML = '<div class="empty">Nothing pinned yet.<br><br>While a passage is loaded, press the <b>⚑ pin</b> button next to its reference — then <b>☆</b> to star the ones you mean to memorise.</div>';
+    return;
+  }
+  const q = ($('pinSearch').value || '').trim();
+  const shown = filteredPins();
+  $('pinMatch').hidden = !q;
+  $('pinMatch').textContent = shown.length + ' of ' + store.pins.length + ' bookmarks';
+  if (!shown.length){
+    els.pinList.innerHTML = '<div class="empty">No bookmarks match “' + escapeHtml(q) + '”.</div>';
+    return;
+  }
+  /* starred bookmarks rise to the top, under their own heading */
+  const starred = shown.filter(p => p.starred), rest = shown.filter(p => !p.starred);
+  const frag = document.createDocumentFragment();
+  const grouped = starred.length && rest.length;
+  if (grouped) frag.appendChild(pinGroup('★ STARRED'));
+  starred.forEach(p => frag.appendChild(pinRow(p)));
+  if (grouped) frag.appendChild(pinGroup('EVERYTHING ELSE'));
+  rest.forEach(p => frag.appendChild(pinRow(p)));
+  els.pinList.replaceChildren(frag);
+}
+
+$('pinSearch').addEventListener('input', renderPins);
+$('pinSearch').addEventListener('keydown', e=>{
+  if (e.key === 'Enter'){ const first = filteredPins()[0]; if (first) loadPin(first); }
+  if (e.key === 'Escape'){ e.stopPropagation(); closeDrawer(); }
+});
+
+/* ---------- the desk ----------
+   four unrelated things share one surface, so they are panes behind a tab strip
+   rather than four sections stacked down a single scroll. Which tab was last
+   open is remembered: someone setting up a key comes back to the key, not to
+   the top of their bookmarks. */
+const DESK_TABS = ['bookmarks', 'scribe', 'sources', 'data'];
+function showTab(name){
+  if (DESK_TABS.indexOf(name) < 0) name = 'bookmarks';
+  store.settings.deskTab = name; save();
+  els.drawer.querySelectorAll('[role="tab"]').forEach(b => {
+    const on = b.dataset.tab === name;
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+    /* only the selected tab is in the tab order — the strip is walked with the
+       arrow keys, which is how a tablist is meant to behave */
+    b.tabIndex = on ? 0 : -1;
+  });
+  els.drawer.querySelectorAll('.pane').forEach(p => { p.hidden = p.dataset.tab !== name; });
+  if (name === 'scribe') renderScribe();
+  if (name === 'sources') renderStoredText();
+}
+function focusTab(name){
+  const b = els.drawer.querySelector('[role="tab"][data-tab="' + name + '"]');
+  if (b) b.focus();
+}
+els.drawer.querySelectorAll('[role="tab"]').forEach(b => {
+  b.addEventListener('click', ()=>{ showTab(b.dataset.tab); focusTab(b.dataset.tab); });
+  b.addEventListener('keydown', e=>{
+    const i = DESK_TABS.indexOf(b.dataset.tab);
+    let j = null;
+    if (e.key === 'ArrowRight') j = (i + 1) % DESK_TABS.length;
+    else if (e.key === 'ArrowLeft') j = (i - 1 + DESK_TABS.length) % DESK_TABS.length;
+    else if (e.key === 'Home') j = 0;
+    else if (e.key === 'End') j = DESK_TABS.length - 1;
+    if (j == null) return;
+    /* stopped here so the drawer's own escape-only handler never sees it */
+    e.preventDefault(); e.stopPropagation();
+    showTab(DESK_TABS[j]); focusTab(DESK_TABS[j]);
+  });
+});
+
+function renderStoredText(){
+  const t = textStats();
+  $('cacheMsg').textContent = t.chapters
+    ? t.chapters.toLocaleString() + (t.chapters === 1 ? ' chapter' : ' chapters') + ' held · ' +
+      t.verses.toLocaleString() + (t.verses === 1 ? ' verse' : ' verses')
+    : 'Nothing stored yet.';
+}
+$('cacheClear').addEventListener('click', ()=>{
+  try { localStorage.removeItem(TEXT_KEY); } catch(e){}
+  heldChapter = null;              /* the slot in memory goes with it */
+  renderStoredText();
+  $('cacheMsg').textContent = 'Cleared — chapters will be fetched again as they come up.';
+});
+
+function openDrawer(tab){
+  $('pinSearch').value = '';
+  renderPins();
+  showTab(tab || store.settings.deskTab);
+  els.drawer.classList.add('open');
+  /* focus lands on the tab strip rather than inside a pane, so the arrow keys
+     work straight away and nothing is parked on the button that opened it */
+  focusTab(store.settings.deskTab);
+}
+function closeDrawer(){ els.drawer.classList.remove('open'); focusGhost(); }
+
+/* an imported position is clamped to the canon, so a hand-edited or
+   older file can't leave the quill pointing at a book that doesn't exist */
+function sanitizeScribe(sc){
+  const out = Object.assign({}, DEFAULT_SCRIBE, sc && typeof sc === 'object' ? sc : null);
+  out.book = Math.min(Math.max(0, out.book|0), CANON.length - 1);
+  out.chapter = Math.min(Math.max(1, out.chapter|0), CANON[out.book][1]);
+  out.verse = Math.max(1, out.verse|0);
+  out.done = !!out.done;
+  return out;
+}
+
+/* ============================== controls ============================== */
+function syncBar(){
+  const s = store.settings;
+  $('mDaily').classList.toggle('on', s.mode==='daily');
+  $('mRandom').classList.toggle('on', s.mode==='random');
+  $('mPassage').classList.toggle('on', s.mode==='passage');
+  $('mPinned').classList.toggle('on', s.mode==='pinned');
+  $('mScribe').classList.toggle('on', s.mode==='scribe');
+  $('mCustom').classList.toggle('on', s.mode==='custom');
+  /* your own text has no translation to choose, so the menu steps aside */
+  $('trGrp').style.display = s.mode === 'custom' ? 'none' : '';
+  els.refWrap.classList.toggle('show', s.mode==='passage');
+  els.countGrp.style.display = (s.mode==='random' || s.mode==='scribe') ? '' : 'none';
+  els.countGrp.querySelectorAll('button').forEach(b =>
+    b.classList.toggle('on', +b.dataset.count === s.count));
+  els.translation.value = s.translation;
+  /* the progress line belongs to scribe mode alone — hung off syncBar so it
+     tracks every mode change, including the ones that never reach a render
+     (switching to passage mode just focuses the input and waits) */
+  renderScribe();
+  renderHints();
+}
+function setMode(m){
+  closeSuggest();
+  store.settings.mode = m; save(); syncBar();
+  if (m === 'passage'){ els.refInput.value = store.settings.passageRef || ''; els.refInput.focus(); }
+  else newTest();
+}
+$('mDaily').addEventListener('click', ()=> setMode('daily'));
+$('mRandom').addEventListener('click', ()=> setMode('random'));
+$('mPassage').addEventListener('click', ()=> setMode('passage'));
+$('mPinned').addEventListener('click', ()=> setMode('pinned'));
+$('mScribe').addEventListener('click', ()=> setMode('scribe'));
+$('mCustom').addEventListener('click', ()=> setMode('custom'));
+$('navBack').addEventListener('click', ()=> goTrail(-1));
+$('navFwd').addEventListener('click', ()=> goTrail(1));
+els.countGrp.querySelectorAll('button').forEach(b =>
+  b.addEventListener('click', ()=>{
+    store.settings.count = +b.dataset.count; save(); syncBar();
+    /* the count resizes the passage in hand — it is not a reason to draw a new one */
+    newTest({keepAnchor:true});
+  }));
+els.translation.addEventListener('change', ()=>{
+  store.settings.translation = els.translation.value; save();
+  /* changing the translation keeps the same passage — it only swaps the text */
+  if (current) loadRef(current.reference, current.daily, current.random); else newTest();
+});
+/* ---------- the passage field ----------
+   the box below it is a listbox the field owns: arrows move through it, enter
+   takes what is highlighted, escape puts it away. With nothing highlighted,
+   enter still just searches what was typed, which is how it behaved before any
+   of this existed. */
+let sugRows = [], sugSel = -1;
+
+function closeSuggest(){
+  $('refSuggest').hidden = true;
+  els.refInput.setAttribute('aria-expanded', 'false');
+  els.refInput.removeAttribute('aria-activedescendant');
+  sugRows = []; sugSel = -1;
+}
+
+function markSuggest(){
+  const box = $('refSuggest');
+  box.querySelectorAll('.row').forEach((b, i) => {
+    const on = i === sugSel;
+    b.classList.toggle('sel', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+    if (on){
+      els.refInput.setAttribute('aria-activedescendant', b.id);
+      /* keep the highlight in view when arrowing past the visible few */
+      if (b.offsetTop < box.scrollTop) box.scrollTop = b.offsetTop;
+      else if (b.offsetTop + b.offsetHeight > box.scrollTop + box.clientHeight)
+        box.scrollTop = b.offsetTop + b.offsetHeight - box.clientHeight;
+    }
+  });
+  if (sugSel < 0) els.refInput.removeAttribute('aria-activedescendant');
+}
+
+function renderSuggest(){
+  if (store.settings.mode !== 'passage') return closeSuggest();
+  const {rows, note} = suggestRef(els.refInput.value);
+  if (!rows.length && !note) return closeSuggest();
+  const box = $('refSuggest');
+  box.innerHTML = '';
+  sugRows = rows; sugSel = -1;
+  rows.forEach((r, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.id = 'sug' + i;
+    b.className = 'row' + (r.kind === 'fix' ? ' fix' : '');
+    b.setAttribute('role', 'option');
+    b.setAttribute('aria-selected', 'false');
+    const n = document.createElement('span'); n.className = 'n'; n.textContent = r.label;
+    b.appendChild(n);
+    if (r.hint){ const h = document.createElement('span'); h.className = 'h'; h.textContent = r.hint; b.appendChild(h); }
+    /* mousedown rather than click, and default prevented, so the field never
+       loses focus and the popover isn't dismissed out from under the press */
+    b.addEventListener('mousedown', ev => { ev.preventDefault(); applySuggest(i); });
+    box.appendChild(b);
+  });
+  if (note){
+    const d = document.createElement('div');
+    d.className = 'note'; d.innerHTML = note;
+    box.appendChild(d);
+  }
+  box.hidden = false;
+  els.refInput.setAttribute('aria-expanded', 'true');
+  markSuggest();
+}
+
+function applySuggest(i){
+  const r = sugRows[i];
+  if (!r) return;
+  /* a book is a completion, not an answer: drop in the full name, keep whatever
+     numbers were already typed, and leave the caret ready for the chapter */
+  if (r.kind === 'book'){
+    els.refInput.value = r.book + (r.rest ? ' ' + r.rest : ' ');
+    els.refInput.focus();
+    const end = els.refInput.value.length;
+    els.refInput.setSelectionRange(end, end);
+    renderSuggest();
+    return;
+  }
+  els.refInput.value = r.ref;
+  closeSuggest();
+  newTest();
+}
+
+$('refGo').addEventListener('click', ()=>{ closeSuggest(); newTest(); });
+els.refInput.addEventListener('input', renderSuggest);
+/* a press inside the popover keeps focus, so a real blur means done with it */
+els.refInput.addEventListener('blur', closeSuggest);
+els.refInput.addEventListener('keydown', e=>{
+  const open = !$('refSuggest').hidden && sugRows.length > 0;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+    if (!open){ renderSuggest(); }
+    else {
+      sugSel = e.key === 'ArrowDown'
+        ? Math.min(sugRows.length - 1, sugSel + 1)
+        : Math.max(-1, sugSel - 1);
+      markSuggest();
+    }
+    e.preventDefault(); e.stopPropagation(); return;
+  }
+  if (e.key === 'Escape' && open){ closeSuggest(); e.preventDefault(); e.stopPropagation(); return; }
+  if (e.key === 'Enter'){
+    e.preventDefault();
+    if (open && sugSel >= 0) applySuggest(sugSel);
+    else { closeSuggest(); newTest(); }
+  }
+  e.stopPropagation();
+});
+/* pin and star are the only buttons that act without moving on — every other
+   control ends in a render that reclaims focus. A pointer click otherwise
+   leaves focus parked on them, so the next enter re-fires the button instead
+   of reaching the global shortcuts (the handler steps aside for a focused
+   BUTTON, which is right for someone tabbing to it). detail is 0 when the
+   click came from the keyboard, and those keep their place in the tab order. */
+function releaseAfterPointer(e){ if (e && e.detail > 0) focusGhost(); }
+els.pinCur.addEventListener('click', e=>{ togglePin(); releaseAfterPointer(e); });
+els.starCur.addEventListener('click', e=>{ toggleStar(); releaseAfterPointer(e); });
+$('btnPinRes').addEventListener('click', e=>{ togglePin(); releaseAfterPointer(e); });
+$('btnStarRes').addEventListener('click', e=>{ toggleStar(); releaseAfterPointer(e); });
+$('starOnly').addEventListener('click', ()=>{
+  store.settings.starredOnly = !store.settings.starredOnly;
+  pinDeck = [];                     /* the pool changed — deal a fresh shuffle */
+  save(); renderPins();
+});
+$('btnRepeat').addEventListener('click', ()=> repeatTest());
+$('btnNext').addEventListener('click', ()=> goNext());
+$('pinsBtn').addEventListener('click', openDrawer);
+
+/* ---------- scribe controls ---------- */
+CANON.forEach((b,i) => {
+  const o = document.createElement('option');
+  o.value = i; o.textContent = b[0] + ' · ' + b[1] + (b[1] === 1 ? ' chapter' : ' chapters');
+  $('scribeJump').appendChild(o);
+});
+$('scribeJump').addEventListener('change', ()=>{
+  const i = +$('scribeJump').value;
+  store.scribe = {book:i, chapter:1, verse:1, done:false};
+  save(); renderScribe();
+  if (store.settings.mode === 'scribe') newTest();
+});
+
+/* erasing months of copying deserves a second press rather than a modal —
+   a browser confirm() would freeze the page for the automation harness too */
+let resetArmed = null;
+$('scribeReset').addEventListener('click', ()=>{
+  const b = $('scribeReset');
+  if (!resetArmed){
+    b.textContent = 'press again to erase progress';
+    resetArmed = setTimeout(()=>{ resetArmed = null; b.textContent = 'start over at Genesis'; }, 4000);
+    return;
+  }
+  clearTimeout(resetArmed); resetArmed = null;
+  b.textContent = 'start over at Genesis';
+  store.scribe = Object.assign({}, DEFAULT_SCRIBE);
+  save(); renderScribe();
+  if (store.settings.mode === 'scribe') newTest();
+});
+$('drawerClose').addEventListener('click', closeDrawer);
+
+/* ---------- your own text ----------
+   the editor takes over the stage rather than opening in a dialog: it is where
+   the passage goes, so it is where the passage is written. It is the whole of
+   custom mode until there is something to type, and reachable by ✎ edit after. */
+function openCustomEditor(){
+  const s = store.settings;
+  $('customTitle').value = s.customTitle || '';
+  $('customText').value = s.customText || '';
+  els.typing.style.display = 'none';
+  els.results.classList.remove('show');
+  $('customPanel').classList.add('show');
+  $('customPanel').hidden = false;
+  /* cancel is only truthful when there is something to go back to */
+  $('customCancel').hidden = !cleanText(s.customText || '');
+  renderCustomCount();
+  renderHints();
+  $('customText').focus();
+}
+
+/* what will actually be typed, which is not quite what was pasted: the same
+   tidying every passage goes through — curly quotes straightened, dashes and
+   ellipses reduced, line breaks closed up — because the typing surface is a
+   plain keyboard. Saying so beats silently dropping characters. */
+function renderCustomCount(){
+  const raw = $('customText').value;
+  const clean = cleanText(raw);
+  const el = $('customCount');
+  const over = clean.length > CUSTOM_MAX;
+  el.classList.toggle('over', over);
+  if (!clean.length){ el.textContent = raw.trim() ? 'nothing typeable in that' : ''; return; }
+  const bits = [clean.length.toLocaleString() + ' characters',
+                clean.split(' ').length.toLocaleString() + ' words'];
+  /* only mention the tidying when it actually changed something */
+  if (clean.replace(/\s/g, '').length !== raw.replace(/\s/g, '').length)
+    bits.push('some marks simplified');
+  if (over) bits.push('only the first ' + CUSTOM_MAX.toLocaleString() + ' will be used');
+  el.textContent = bits.join(' · ');
+}
+
+function saveCustom(){
+  const s = store.settings;
+  s.customTitle = $('customTitle').value.trim();
+  s.customText = $('customText').value;
+  save();
+}
+
+$('customText').addEventListener('input', renderCustomCount);
+$('customTitle').addEventListener('keydown', e=>{
+  e.stopPropagation();
+  if (e.key === 'Enter'){ e.preventDefault(); $('customText').focus(); }
+});
+/* the textarea keeps every key to itself — newlines belong to the text, and
+   escape and tab must not reach the shortcuts and throw the writing away */
+$('customText').addEventListener('keydown', e=> e.stopPropagation());
+
+$('customStart').addEventListener('click', ()=>{
+  if (!cleanText($('customText').value)){ $('customText').focus(); return; }
+  saveCustom();
+  store.settings.mode = 'custom'; save(); syncBar();
+  showTyping();
+  newTest();
+});
+$('customCancel').addEventListener('click', ()=>{
+  showTyping();
+  /* back to the text as it was saved, discarding whatever was being edited */
+  if (current && current.custom) renderPassage(current, true);
+  else newTest();
+});
+$('editCustom').addEventListener('click', ()=>{
+  /* edit what is on screen, which after loading a bookmark is that bookmark
+     rather than whatever the editor last held. But adopt only when they really
+     differ: writing the tidied copy back over the original would flatten a
+     pasted poem's line breaks a little more on every visit. */
+  if (current && current.custom &&
+      cleanText(store.settings.customText || '') !== current.custom.text){
+    store.settings.customText = current.custom.raw;
+    store.settings.customTitle = current.custom.title;
+  }
+  openCustomEditor();
+});
+
+/* ---------- translations & keys ----------
+   the copyright line is a licence condition, not decoration: Crossway, Biblica
+   and Tyndale each require their notice wherever their text appears, and
+   Crossway a link to esv.org besides. It follows the text actually on screen
+   rather than the menu, so a daily verse that fell back to the NET, or a
+   bookmark saved in another translation, is still credited correctly. */
+const SRC_LINKS = {
+  custom: 'your own text, kept in this browser',
+  bibleapi: 'text from <a href="https://bible-api.com" target="_blank" rel="noopener">bible-api.com</a>',
+  nlt: 'text from <a href="https://api.nlt.to" target="_blank" rel="noopener">Tyndale’s NLT API</a>',
+  esv: 'text from <a href="https://www.esv.org" target="_blank" rel="noopener">www.esv.org</a>',
+  apibible: 'text from <a href="https://api.bible" target="_blank" rel="noopener">API.Bible</a>',
+};
+const COPY_LINES = {
+  esv: 'Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), copyright © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission. All rights reserved. The ESV text may not be quoted in any publication made available to the public by a Creative Commons license.',
+  niv: 'THE HOLY BIBLE, NEW INTERNATIONAL VERSION®, NIV® Copyright © 1973, 1978, 1984, 2011 by Biblica, Inc.® Used by permission. All rights reserved worldwide.',
+  nlt: 'Holy Bible, New Living Translation, copyright © 1996, 2004, 2015 by Tyndale House Foundation. Used by permission of Tyndale House Publishers, Carol Stream, Illinois 60188. All rights reserved.',
+};
+/* `quoted` is whether publisher text is actually on screen. A notice standing
+   in for a passage names the service being called but carries no copyright
+   line, because nothing of theirs is being shown to put it under. */
+function renderAttribution(tr, quoted){
+  tr = tr || store.settings.translation;
+  const src = (TRANSLATIONS[tr] || {}).src || 'bibleapi';
+  $('srcLine').innerHTML = SRC_LINKS[src] || SRC_LINKS.bibleapi;
+  const c = quoted ? COPY_LINES[tr] : '';
+  $('copyLine').innerHTML = c || '';
+  $('copyLine').hidden = !c;
+}
+
+/* Crossway doesn't show you a key, it shows you a whole HTTP header line —
+   `Authorization: Token d9ca…` — of which only the last run of characters is
+   the key. People copy the line, because the line is what they were shown, and
+   the app supplies the `Token ` scheme itself, so the paste would go out as
+   `Token Token d9ca…` and be refused with no useful explanation.
+
+   So the header name and the scheme are peeled off here instead. Quotes and
+   angle brackets go too — documentation writes keys as <YOUR_KEY> often enough
+   that people paste the brackets with it. Returns the cleaned key, and whether
+   anything was actually taken off, so the field can say what it did. */
+function cleanKey(raw){
+  const before = String(raw == null ? '' : raw).trim();
+  const bare = before
+    .replace(/^authorization\s*:\s*/i, '')
+    .replace(/^(token|bearer|api-?key\s*:?)\s+/i, '')
+    .replace(/^[<"'\[(]+/, '')
+    .replace(/[>"'\])]+$/, '')
+    .trim();
+  /* a key that came back wrapped across a line is still a key, so up to two
+     fragments are joined. More than two is prose someone pasted by mistake, and
+     joining it would only disguise it as a key and swallow the warning. */
+  const parts = bare.split(/\s+/).filter(Boolean);
+  const key = parts.length <= 2 ? parts.join('') : bare;
+  return {key, trimmed: key !== before};
+}
+
+/* one unbroken run of key-ish characters. Deliberately loose — it is here to
+   catch a sentence pasted by mistake, not to police a format the publishers
+   are free to change */
+const looksLikeKey = v => /^[A-Za-z0-9._~:-]{16,}$/.test(v);
+
+function bindKeyField(inputId, slot, msgId, markId, howId){
+  const inp = $(inputId), msg = $(msgId), mark = $(markId), how = $(howId);
+  inp.value = store.keys[slot] || '';
+  mark.hidden = !inp.value;
+  /* the walkthrough starts open for a key that isn't set yet and folded away
+     once it is — whoever still needs the steps is exactly whoever has no key.
+     Only on load: once someone has opened or shut it themselves, that stands. */
+  if (how) how.open = !inp.value;
+  const settled = () => {
+    const {key: v, trimmed} = cleanKey(inp.value);
+    /* show what was actually kept, so the field never displays one thing while
+       storing another */
+    if (inp.value !== v && document.activeElement !== inp) inp.value = v;
+    /* a new API.Bible key means a different catalogue — the remembered NIV id
+       belonged to the old account and may not exist in the new one */
+    if (slot === 'apibible' && v !== store.keys.apibible) store.keys.nivBible = '';
+    store.keys[slot] = v; save();
+    mark.hidden = !v;
+    msg.className = 'kmsg';
+    if (!v) msg.textContent = '';
+    else if (!looksLikeKey(v))
+      msg.className = 'kmsg bad',
+      msg.textContent = 'That doesn’t look like a key. A key is one unbroken run of ' +
+                        'letters and numbers, with no spaces in it.';
+    else if (trimmed)
+      msg.className = 'kmsg ok',
+      msg.textContent = 'Saved — and the “Authorization: Token” wrapping was trimmed off for ' +
+                        'you, since only the code itself is the key. Choose it in the menu at ' +
+                        'the top of the screen.';
+    else
+      msg.textContent = 'Saved. Choose it in the menu at the top of the screen.';
+  };
+  /* cleaned on the way out of the field as well, so a paste is tidied even if
+     the last thing typed left it looking half-finished */
+  inp.addEventListener('blur', ()=>{ inp.value = cleanKey(inp.value).key; settled(); });
+  inp.addEventListener('input', settled);
+  inp.addEventListener('change', settled);
+}
+bindKeyField('esvKey', 'esv', 'esvMsg', 'esvSet', 'esvHow');
+bindKeyField('nivKey', 'apibible', 'nivMsg', 'nivSet', 'nivHow');
+/* the NLT needs no key, so its optional field stays folded until asked for */
+bindKeyField('nltKey', 'nlt', 'nltMsg', 'nltSet', null);
+
+/* ---------- export / import ---------- */
+$('expBtn').addEventListener('click', ()=>{
+  /* keys are left out on purpose — Crossway's terms forbid passing one on, and
+     an export is a file people mail to themselves and to each other */
+  const bare = Object.assign({}, store); delete bare.keys;
+  const blob = new Blob([JSON.stringify(bare, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'versewright-data.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=> URL.revokeObjectURL(a.href), 10000);
+  $('dataMsg').textContent = 'Downloaded versewright-data.json.';
+});
+$('impBtn').addEventListener('click', ()=> $('impFile').click());
+$('impFile').addEventListener('change', async ()=>{
+  const f = $('impFile').files[0];
+  $('impFile').value = '';
+  if (!f) return;
+  try {
+    const j = JSON.parse(await f.text());
+    if (!j || typeof j !== 'object' || (!j.settings && !Array.isArray(j.pins)))
+      throw new Error('shape');
+    store = {
+      v: 2,
+      keys: store.keys,          /* this browser's keys survive an import */
+      settings: Object.assign({}, DEFAULT_SETTINGS, j.settings),
+      pins: Array.isArray(j.pins)
+        ? j.pins.filter(p => p && typeof p.ref === 'string')
+                .map(p => {
+                  const q = {ref: p.ref, translation: p.translation, starred: !!p.starred};
+                  /* a custom bookmark is its text; one that arrived without any
+                     is an empty shell and is dropped below */
+                  if (p.translation === 'custom'){
+                    q.text = typeof p.text === 'string' ? p.text.slice(0, CUSTOM_MAX) : '';
+                    q.raw = typeof p.raw === 'string' ? p.raw.slice(0, CUSTOM_MAX) : q.text;
+                  }
+                  return q;
+                })
+                .filter(p => p.translation !== 'custom' || p.text)
+        : [],
+      scribe: sanitizeScribe(j.scribe),
+      best: (j.best && typeof j.best.wpm === 'number') ? j.best : null,
+      history: Array.isArray(j.history) ? j.history.slice(0,8) : [],
+    };
+    pinDeck = [];
+    save(); syncBar(); renderPins(); renderScribe(); renderAttribution(null, false);
+    els.refInput.value = store.settings.passageRef || '';
+    const n = store.pins.length;
+    $('dataMsg').textContent = 'Imported — ' + n + ' bookmark' + (n===1?'':'s') + ', settings, and records restored. This replaced what was here before.';
+    newTest();
+  } catch(e){
+    $('dataMsg').textContent = 'That file couldn’t be read as Versewright data — nothing was changed.';
+  }
+});
+
+/* ============================== input plumbing ============================== */
+const SENTINEL = '·';
+function focusGhost(){ els.ghost.value = SENTINEL; els.ghost.focus({preventScroll:true}); }
+/* the typing field is where focus belongs after any load — but not while the
+   drawer is open, or jumping the quill from there would yank focus out of it */
+function reclaimFocus(){ if (!els.drawer.classList.contains('open')) focusGhost(); }
+
+els.wrap.addEventListener('mousedown', e=>{ e.preventDefault(); focusGhost(); });
+els.veil.addEventListener('click', focusGhost);
+els.ghost.addEventListener('focus', ()=> els.veil.classList.remove('show'));
+els.ghost.addEventListener('blur', ()=>{
+  if (chars.length && !finished) els.veil.classList.add('show');
+});
+
+els.ghost.addEventListener('keydown', e=>{
+  if (e.key === 'Backspace'){ e.preventDefault(); onBackspace(e.ctrlKey || e.altKey || e.metaKey); els.ghost.value = SENTINEL; return; }
+  if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey){
+    e.preventDefault(); onChar(e.key); els.ghost.value = SENTINEL;
+  }
+});
+/* mobile soft keyboards: diff against the sentinel */
+els.ghost.addEventListener('input', ()=>{
+  const v = els.ghost.value;
+  if (v.length > 1){ for (const c of v.slice(1)) onChar(c); }
+  else if (v.length === 0){ onBackspace(false); }
+  els.ghost.value = SENTINEL;
+});
+
+window.addEventListener('keydown', e=>{
+  /* the drawer is a modal surface: while it is open, nothing behind it should
+     answer the keyboard. Re-rendering a pin row destroys the button holding
+     focus, dropping it to <body> — which passed every guard below and let a
+     stray tab load a new passage out of sight behind the open drawer. */
+  if (els.drawer.classList.contains('open')){
+    if (e.key === 'Escape'){ e.preventDefault(); closeDrawer(); }
+    return;
+  }
+  const tag = e.target.tagName;
+  if (e.target !== els.ghost){
+    /* A included so a focused footer link still activates on enter instead of
+       being swallowed (and preventDefault'd) by the repeat shortcut */
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || tag === 'A') return;
+    if (tag === 'BUTTON' && e.key !== 'Escape') return;
+  }
+  if (e.key === 'Tab' && e.shiftKey){ e.preventDefault(); goTrail(-1); return; }
+  if (e.key === 'Tab'){
+    e.preventDefault();
+    /* walking back then forward must land on the very same text, so tab
+       replays the log before it fetches anything new */
+    if (goTrail(1)) return;
+    /* mid-passage tab used to call newTest(), which in daily, passage and
+       scribe modes just refetched what was already on screen — a dead key.
+       goNext() is what "next" means in each mode, and it is the same answer
+       whether or not the run has been finished. */
+    if (!nextLabel()) return;
+    goNext();
+    return;
+  }
+  /* only a finished run can be repeated: mid-passage there is nothing to
+     repeat yet (esc restarts instead), and before the first keystroke
+     "again" is a lie — it used to fire here and silently redraw the text */
+  if (e.key === 'Enter' && finished){ e.preventDefault(); repeatTest(); return; }
+  if (e.key === 'Escape'){
+    e.preventDefault(); showTyping(); resetRun(); focusGhost(); return;
+  }
+  /* any key takes focus, and the keystroke still counts. It used to only move
+     focus, which quietly ate the first letter of anyone who just started
+     typing — the one case this branch exists to serve. */
+  if (e.target !== els.ghost && !e.ctrlKey && !e.metaKey && !e.altKey){
+    if (e.key.length === 1){
+      e.preventDefault(); focusGhost(); onChar(e.key); return;
+    }
+    if (e.key === 'Backspace'){
+      e.preventDefault(); focusGhost(); onBackspace(false); return;
+    }
+  }
+});
+
+let resizeT = null;
+window.addEventListener('resize', ()=>{
+  clearTimeout(resizeT);
+  resizeT = setTimeout(()=>{ sizeWrap(); placeCaret(); }, 120);
+});
+
+/* the webfont can land after the first caret placement and reflow the text */
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ sizeWrap(); placeCaret(); });
+
+/* ============================== boot ============================== */
+syncBar();
+renderAttribution(null, false);
+renderPins();
+renderScribe();
+renderTrail();
+renderHints();
+els.refInput.value = store.settings.passageRef || '';
+newTest();
+</script>
+</body>
+</html>
