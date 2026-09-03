@@ -162,6 +162,20 @@
   }
   .veil.show{display:flex}
 
+  /* something refused, said beside the passage rather than in place of it — a
+     stray paste must not cost anyone the run they are in the middle of, and a
+     word about it must not land on the very text they are reading */
+  .flash{
+    position:absolute;right:0;top:calc(100% + .7rem);z-index:6;max-width:24rem;
+    background:var(--raised);border:1px solid var(--line);border-radius:7px;
+    padding:.55rem .7rem;font-size:.68rem;line-height:1.6;color:var(--mut);
+    box-shadow:0 10px 28px rgba(0,0,0,.45);pointer-events:none;
+    opacity:0;transform:translateY(.3rem);transition:opacity .18s ease, transform .18s ease;
+  }
+  .flash.show{opacity:1;transform:none}
+  .flash .hint{color:var(--faint);display:block;margin-top:.35rem}
+  .flash b{color:var(--paper);font-weight:400}
+
   /* ---------- your own text ---------- */
   .custom{display:none;max-width:44rem}
   .custom.show{display:block}
@@ -240,28 +254,71 @@
   #pinSearch:focus-visible{outline:1px solid var(--gilt);outline-offset:1px}
   .pmatch{font-size:.6rem;color:var(--faint);letter-spacing:.08em;margin:.15rem 0 .35rem}
   .pinrow{display:flex;align-items:center;gap:.5rem;padding:.45rem 0;border-bottom:1px solid var(--line);font-size:.72rem}
-  .pinrow .pr{flex:1;background:none;border:none;font:inherit;color:var(--paper);text-align:left;cursor:pointer;padding:.2rem 0}
+  .pinrow .pmain{flex:1;min-width:0}
+  .pinrow .pr{width:100%;background:none;border:none;font:inherit;color:var(--paper);text-align:left;cursor:pointer;padding:.2rem 0}
   .pinrow .pr:hover{color:var(--gilt)}
-  .pinrow .pr small{display:block;color:var(--faint);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;margin-top:.15rem}
+  .pinrow .pmeta{display:flex;align-items:center;gap:.3rem;margin-top:.1rem}
+  .pinrow .ptag{color:var(--faint);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase}
+  /* the translation a bookmark is read in, changed in place. It sits inside a
+     pane, so every property the drawer's full-width select sets is set back */
+  .pinrow .ptr{
+    width:auto;font:inherit;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);cursor:pointer;border:none;border-radius:4px;
+    padding:.05rem .95rem .05rem .1rem;appearance:none;-webkit-appearance:none;
+    background:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='5'%3E%3Cpath d='M0 0l3.5 5L7 0z' fill='%236b5f50'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right .3rem center;
+  }
+  .pinrow .ptr:hover{color:var(--paper)}
+  .pinrow .ptr.locked{color:var(--gilt-dim)}
+  .pinrow .ptr.locked:hover{color:var(--gilt)}
   .pinrow .del{background:none;border:none;color:var(--faint);cursor:pointer;font:inherit;padding:.2rem .3rem}
   .pinrow .del:hover{color:var(--red)}
   .pinrow .star{background:none;border:none;color:#5c5042;cursor:pointer;font:inherit;font-size:.85rem;line-height:1;padding:.2rem .1rem;flex:none}
   .pinrow .star:hover{color:var(--gilt-dim)}
   .pinrow .star.on,.pinrow .star.on:hover{color:var(--gilt)}
-  .pgroup{font-size:.58rem;letter-spacing:.18em;color:var(--gilt-dim);margin:1rem 0 .1rem}
+  /* a shelf heading names a bundle and carries the two things you can do to
+     one: rename it, or take it apart. Neither touches the bookmarks. */
+  .pgroup{
+    display:flex;align-items:center;gap:.4rem;
+    font-size:.58rem;letter-spacing:.18em;color:var(--gilt-dim);margin:1rem 0 .1rem;
+  }
   .pgroup:first-child{margin-top:.1rem}
-  .startoggle{
-    display:flex;align-items:center;gap:.5rem;width:100%;text-align:left;
-    font:inherit;font-size:.65rem;color:var(--mut);background:none;border:none;
-    cursor:pointer;padding:.25rem 0;margin:0 0 .6rem;line-height:1.5;
+  .pgroup .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pgroup button{
+    font:inherit;font-size:.62rem;letter-spacing:0;line-height:1;flex:none;
+    background:none;border:none;color:var(--faint);cursor:pointer;padding:.15rem .2rem;
   }
-  .startoggle:hover{color:var(--paper)}
-  .startoggle.on{color:var(--gilt)}
-  .startoggle .box{
-    width:.85rem;height:.85rem;flex:none;border:1px solid var(--line);border-radius:3px;
-    display:flex;align-items:center;justify-content:center;font-size:.55rem;color:transparent;
+  .pgroup button:hover{color:var(--gilt)}
+  .pgroup button.dis:hover{color:var(--red)}
+  .pgroup button:focus-visible{outline:1px solid var(--gilt);outline-offset:1px}
+
+  /* what pinned mode draws from, and in what order — one line, because they are
+     one decision: which bookmarks, and how they come round */
+  .pdraw{margin:0 0 .8rem}
+  .pdraw .plbl{
+    display:block;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--gilt-dim);margin-bottom:.35rem;
   }
-  .startoggle.on .box{background:var(--gilt);border-color:var(--gilt);color:var(--leather)}
+  .pdrow{display:flex;align-items:center;gap:.4rem}
+  #pinFrom{width:auto;flex:1;min-width:0;font-size:.66rem;padding:.35rem .5rem}
+  .pord{display:flex;gap:.15rem;flex:none}
+  .pord button{
+    font:inherit;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);background:none;border:1px solid var(--line);border-radius:5px;
+    padding:.32rem .42rem;cursor:pointer;
+  }
+  .pord button:hover{color:var(--paper)}
+  .pord button.on{color:var(--gilt);border-color:var(--gilt-dim)}
+  .pord button:focus-visible{outline:1px solid var(--gilt);outline-offset:1px}
+  .pnote{font-size:.6rem;color:var(--faint);line-height:1.55;margin-top:.4rem}
+  /* naming a bundle, in the row or the heading that asked for it */
+  .pname{
+    font:inherit;font-size:.62rem;color:var(--paper);letter-spacing:normal;text-transform:none;
+    background:var(--leather);border:1px solid var(--line);border-radius:5px;
+    padding:.15rem .35rem;width:10rem;max-width:100%;
+  }
+  .pname:focus-visible{outline:1px solid var(--gilt);outline-offset:1px}
   .drawer .empty{font-size:.7rem;color:var(--faint);line-height:1.7}
   .drawer .close{position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--faint);font:inherit;cursor:pointer;font-size:.9rem}
   .drawer .close:hover{color:var(--paper)}
@@ -443,6 +500,8 @@
       </div>
     </div>
 
+    <div class="flash" id="flash" aria-live="polite"></div>
+
     <div class="custom" id="customPanel" hidden>
       <h2>Your own text</h2>
       <div class="sub">Anything you like — a verse in a translation this app can’t reach, a hymn, a creed, a passage you are learning by heart. It stays in this browser, and it can be bookmarked like any other passage.</div>
@@ -498,8 +557,18 @@
   </div>
 
   <div class="pane" data-tab="bookmarks" id="pane-bookmarks" role="tabpanel" aria-labelledby="tab-bookmarks" tabindex="0">
-    <div class="sub">Pinned passages live in this browser. Choose <i>pinned</i> as the source to cycle through them in shuffled order — every pin comes up once before any repeats. Pin just one to run it over and over. <b>Star</b> the ones you are committing to memory and they rise to the top here.</div>
-    <button class="startoggle" id="starOnly" aria-pressed="false" hidden><span class="box">✓</span><span class="lbl"></span></button>
+    <div class="sub">Pinned passages live in this browser, and <i>pinned</i> as the source cycles through them. A bookmark is the passage, not one publisher’s wording of it: it is read in whichever translation the menu is set to, unless you fix one under it here. <b>Star</b> the ones you are committing to memory and they rise to the top. Put bookmarks on a <b>bundle</b> — the psalms you are learning, a course through the epistles — and pinned mode can draw from that shelf alone.</div>
+    <div class="pdraw" id="pdraw" hidden>
+      <label class="plbl" for="pinFrom">in pinned mode, draw from</label>
+      <div class="pdrow">
+        <select id="pinFrom"></select>
+        <div class="pord" role="group" aria-label="the order pinned mode draws in">
+          <button id="ordOrder" aria-pressed="false">in order</button>
+          <button id="ordShuffle" aria-pressed="true">shuffled</button>
+        </div>
+      </div>
+      <div class="pnote" id="pdrawNote"></div>
+    </div>
     <input id="pinSearch" placeholder="search bookmarks" spellcheck="false" autocomplete="off" hidden>
     <div class="pmatch" id="pinMatch" hidden></div>
     <div id="pinList"></div>
@@ -608,7 +677,8 @@ const LS_KEY = 'versewright.v1';
    and records saved under the old key are adopted once, then the new key owns them.
    Safe to drop this fallback once returning users have all been through a session. */
 const LS_KEY_LEGACY = 'scriptorium.v1';
-const DEFAULT_SETTINGS = {mode:'daily', count:2, translation:'web', passageRef:'John 3:16-18', starredOnly:false, deskTab:'bookmarks',
+const DEFAULT_SETTINGS = {mode:'daily', count:2, translation:'web', passageRef:'John 3:16-18',
+                         pinFrom:'all', pinOrder:'shuffled', pinCursor:'', deskTab:'bookmarks',
                          customText:'', customTitle:''};
 const DEFAULT_SCRIBE = {book:0, chapter:1, verse:1, done:false};
 let store = { settings:Object.assign({}, DEFAULT_SETTINGS), pins:[], best:null, history:[],
@@ -623,6 +693,14 @@ try {
 try { if (!localStorage.getItem(LS_KEY) && localStorage.getItem(LS_KEY_LEGACY)) save(); } catch(e) {}
 /* one-time switch to the new daily-verse default for stores saved before it existed */
 if (!store.v){ store.v = 2; store.settings.mode = 'daily'; }
+/* one-time fold to one bookmark per reference — see sanitizePins() */
+if (store.v < 3){ store.v = 3; store.pins = sanitizePins(Array.isArray(store.pins) ? store.pins : [], true); }
+/* the starred-only switch was one pool among the several there are now */
+if (store.v < 4){
+  store.v = 4;
+  if (store.settings.starredOnly) store.settings.pinFrom = 'starred';
+  delete store.settings.starredOnly;
+}
 store.scribe = Object.assign({}, DEFAULT_SCRIBE, store.scribe);
 /* publisher API keys the reader supplied. Kept beside the rest of the store but
    deliberately outside the export file — Crossway's terms forbid passing a key
@@ -752,6 +830,7 @@ function renderPassage(p, fromTrail){
 }
 
 function resetRun(){
+  hideFlash();
   idx = 0; started = false; finished = false;
   keystrokes = 0; errors = 0; correctChars = 0;
   chars.forEach(c => c.el.className = 'ch');
@@ -1816,6 +1895,9 @@ async function newTest(opts){
   const seq = ++loadSeq;
   const s = store.settings;
   const anchor = (opts && opts.keepAnchor && current && current.random) ? current.random : null;
+  /* which translation the attempt was made in — a bookmark locked to one is
+     not the menu's, and an error should name the translation that failed */
+  let usedTr = s.translation;
   /* only announce a fetch that is actually taking a moment. Re-slicing a held
      chapter renders in the same breath, and blanking the passage on the way to
      redrawing it one verse longer reads as a reload it never was */
@@ -1843,7 +1925,8 @@ async function newTest(opts){
       const pin = nextPin();
       /* a bookmark of your own text carries the words with it; there is nothing
          to go and get */
-      p = pinPassage(pin) || await fetchPassage(pin.ref, pin.translation || s.translation);
+      usedTr = pinTranslation(pin);
+      p = pinPassage(pin) || await fetchPassage(pin.ref, usedTr);
     } else if (s.mode === 'scribe'){
       if (store.scribe.done){
         showNotice('<b>The whole canon, copied.</b> Genesis to Revelation, ' + TOTAL_CH.toLocaleString() +
@@ -1865,28 +1948,30 @@ async function newTest(opts){
     if (seq !== loadSeq) return; // superseded by a newer request
     renderPassage(p);
   } catch(err){
-    if (seq === loadSeq) handleLoadError(err);
+    if (seq === loadSeq) handleLoadError(err, usedTr);
   } finally {
     clearTimeout(notice);
   }
 }
 
-/* load a specific reference in the current translation (translation switches, bookmarks) */
-async function loadRef(ref, daily, random){
+/* load a specific reference (translation switches, bookmarks) — in the menu's
+   translation unless one is named, as a bookmark locked to one does */
+async function loadRef(ref, daily, random, tr){
   const seq = ++loadSeq;
+  const use = tr || store.settings.translation;
   showNotice('fetching the text…');
   try {
-    const p = await fetchPassage(ref, store.settings.translation);
+    const p = await fetchPassage(ref, use);
     p.daily = !!daily;
     if (random) p.random = random;   /* a translation swap must not cost the anchor */
     if (seq === loadSeq) renderPassage(p);
   } catch(err){
-    if (seq === loadSeq) handleLoadError(err);
+    if (seq === loadSeq) handleLoadError(err, use);
   }
 }
 
-function handleLoadError(err){
-  const tr = store.settings.translation;
+function handleLoadError(err, trUsed){
+  const tr = trUsed || store.settings.translation;
   const trName = TR_NAMES[tr] || tr;
   const host = SRC_HOST[(TRANSLATIONS[tr] || {}).src || 'bibleapi'];
   const code = err && err.message;
@@ -1967,23 +2052,55 @@ function repeatTest(){
 }
 
 /* ============================== pins ============================== */
-/* a bookmark is identified by what it points at. A reference and translation is
-   enough for scripture; text the reader wrote has no reference to be known by,
-   so it is keyed by a hash of the text itself. Both shapes are compared through
-   the same key, which is what lets custom text be bookmarked like anything
-   else without a second code path through the whole feature. */
+/* a bookmark is identified by what it points at: a reference for scripture, and
+   for text the reader wrote — which has no reference to be known by — a hash of
+   the text itself. Both shapes are compared through the same key, which is what
+   lets custom text be bookmarked like anything else without a second code path
+   through the whole feature.
+
+   The translation is deliberately no part of that identity. A bookmark is the
+   passage, not one publisher's wording of it, so it is read in whatever the
+   translation menu is set to at the time — unless it has been locked to one
+   from the desk, which is how to say "this one, always in the KJV". */
 function pinKey(p){
   if (!p) return '';
   return p.translation === 'custom'
     ? 'custom|' + textHash(p.text || '')
-    : (p.ref + '|' + p.translation).toLowerCase();
+    : 'ref|' + String(p.ref || '').toLowerCase();
 }
 /* the same key, computed from a passage on screen rather than a stored pin */
 function passageKey(p){
   if (!p) return '';
   return p.custom
     ? 'custom|' + textHash(p.custom.text || '')
-    : (p.reference + '|' + p.translation).toLowerCase();
+    : 'ref|' + String(p.reference || '').toLowerCase();
+}
+/* the translation a bookmark is actually read in */
+function pinTranslation(p){
+  return (p && p.translation && p.translation !== 'custom')
+    ? p.translation : store.settings.translation;
+}
+/* one bookmark per reference, stars kept when two fold together.
+
+   `freeing` is for stores written before a bookmark could follow the menu, when
+   reference and translation together were the identity: the same passage pinned
+   in two translations was two bookmarks and neither would follow anything. A
+   reference pinned once is set loose to follow the menu — that is the whole
+   point of the change — while a reference pinned in several translations keeps
+   the first as a lock, because pinning it twice was a deliberate choice and the
+   choice is worth keeping. Newer data has already said what it means, so it is
+   only deduplicated. */
+function sanitizePins(list, freeing){
+  const kept = new Map(), out = [], seen = new Map();
+  for (const p of list) seen.set(pinKey(p), (seen.get(pinKey(p)) || 0) + 1);
+  for (const p of list){
+    const k = pinKey(p), had = kept.get(k);
+    if (had){ had.starred = had.starred || !!p.starred; continue; }
+    const q = Object.assign({}, p);
+    if (freeing && q.translation !== 'custom' && seen.get(k) < 2) q.translation = null;
+    kept.set(k, q); out.push(q);
+  }
+  return out;
 }
 function findPinFor(p){
   const k = passageKey(p);
@@ -1996,18 +2113,77 @@ function pinPassage(p){
   return customPassage(p.text || '', title, p.raw || p.text || '');
 }
 
-/* the pool the pinned source deals from — starred only when that is asked for,
-   falling back to every bookmark while nothing is starred yet */
+/* ---------- bundles ----------
+   a bundle is a shelf a bookmark sits on: the psalms someone is learning, a
+   course through the epistles, the verses for a talk on Sunday. It is not a
+   record of its own — it is only the name each bookmark carries — so a bundle
+   comes into being with the first bookmark put on it and is gone with the last,
+   and deleting a bookmark can never leave an empty shelf behind. One shelf per
+   bookmark, which is what lets the desk simply list them under their headings.
+   Starring stays the other axis: a bookmark can be starred on any shelf. */
+const BUNDLE_MAX = 32;
+function bundleName(v){
+  return String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, BUNDLE_MAX);
+}
+function sameBundle(p, name){
+  return (p.bundle || '').toLowerCase() === String(name || '').toLowerCase();
+}
+/* every shelf in use, in name order — two bookmarks shelved under names that
+   differ only in case belong to the one shelf, and it is spelled the way the
+   first of them spelled it */
+function bundles(){
+  const seen = new Map();
+  for (const p of store.pins) if (p.bundle && !seen.has(p.bundle.toLowerCase()))
+    seen.set(p.bundle.toLowerCase(), p.bundle);
+  return [...seen.values()].sort((a, b) => a.localeCompare(b));
+}
+function pinsInBundle(name){ return store.pins.filter(p => sameBundle(p, name)); }
+
+/* what pinned mode deals from: every bookmark, the starred ones, or one shelf.
+   An empty choice falls back to everything rather than leaving the mode with
+   nothing to draw — the note under the control says so when it happens. */
 function pinPool(){
-  const starred = store.pins.filter(p => p.starred);
-  return (store.settings.starredOnly && starred.length) ? starred : store.pins;
+  const from = store.settings.pinFrom || 'all';
+  let pool = store.pins;
+  if (from === 'starred') pool = store.pins.filter(p => p.starred);
+  else if (from.startsWith('bundle:')) pool = pinsInBundle(from.slice(7));
+  return pool.length ? pool : store.pins;
 }
 
-/* pinned mode cycles through the bookmarks in shuffled order, visiting every
-   pin once before reshuffling; pins added mid-cycle join the next shuffle */
+/* the desk's own arrangement: a group per shelf in name order, the unshelved
+   last, starred first within each. Pinned mode walks this very order when it is
+   set to go in order, so what the desk shows is the sequence it deals. */
+function arrangePins(list){
+  const byStar = ps => [...ps.filter(p => p.starred), ...ps.filter(p => !p.starred)];
+  const groups = [];
+  for (const b of bundles()){
+    const ps = list.filter(p => sameBundle(p, b));
+    if (ps.length) groups.push({name: b, pins: byStar(ps)});
+  }
+  const loose = list.filter(p => !p.bundle);
+  if (loose.length) groups.push({name: '', pins: byStar(loose)});
+  return groups;
+}
+
+/* shuffled cycles through the pool visiting every bookmark once before
+   reshuffling; pins added mid-cycle join the next shuffle */
 let pinDeck = [];
 function nextPin(){
-  const keys = pinPool().map(pinKey);
+  const pool = pinPool();
+  if (!pool.length) return null;
+  if (store.settings.pinOrder === 'order'){
+    /* in order: the desk's arrangement, picked up where it was left off. The
+       place is kept by which bookmark was last dealt rather than by a number,
+       so adding, deleting or re-shelving one doesn't lose the reader's place —
+       and an unknown bookmark (a fresh cursor, a deleted one) starts at the
+       top rather than anywhere in particular. */
+    const walk = arrangePins(pool).flatMap(g => g.pins);
+    const at = walk.findIndex(p => pinKey(p) === store.settings.pinCursor);
+    const p = walk[(at + 1) % walk.length];
+    setPinCursor(p);
+    return p;
+  }
+  const keys = pool.map(pinKey);
   pinDeck = pinDeck.filter(k => keys.includes(k));   // drop deleted pins
   if (!pinDeck.length){
     pinDeck = keys.slice();
@@ -2020,7 +2196,15 @@ function nextPin(){
       pinDeck.push(pinDeck.shift());
   }
   const k = pinDeck.shift();
-  return store.pins.find(p => pinKey(p) === k);
+  const p = store.pins.find(x => pinKey(x) === k);
+  setPinCursor(p);   /* so a later switch to going in order carries on from here */
+  return p;
+}
+/* the place in the sequence, kept whichever way a bookmark was reached */
+function setPinCursor(p){
+  const k = pinKey(p);
+  if (!k || store.settings.pinCursor === k) return;
+  store.settings.pinCursor = k; save();
 }
 function togglePin(){
   if (!current) return;
@@ -2032,7 +2216,8 @@ function togglePin(){
     store.pins.push({ref: current.reference, translation: 'custom',
                      text: current.custom.text, raw: current.custom.raw});
   } else {
-    store.pins.push({ref: current.reference, translation: current.translation});
+    /* no translation: the bookmark follows the menu until it is locked to one */
+    store.pins.push({ref: current.reference, translation: null});
   }
   save(); updatePinBtn(); updatePinResBtn(); updateStarBtn(); renderPins();
 }
@@ -2064,9 +2249,15 @@ function updateStarBtn(){
 }
 function updatePinBtn(){
   if (!current) return;
-  const on = !!findPinFor(current);
-  els.pinCur.textContent = on ? '⚑ pinned' : '⚑ pin';
-  els.pinCur.classList.toggle('pinned', on);
+  const p = findPinFor(current);
+  els.pinCur.textContent = p ? '⚑ pinned' : '⚑ pin';
+  els.pinCur.classList.toggle('pinned', !!p);
+  const own = !!current.custom;
+  els.pinCur.title = !p
+    ? (own ? 'pin this text' : 'pin this passage — it will follow the translation menu')
+    : own ? 'bookmarked, and the text is kept with it'
+    : p.translation ? 'bookmarked, always in the ' + (TR_NAMES[p.translation] || p.translation)
+    : 'bookmarked — read in whichever translation is chosen';
 }
 function updatePinResBtn(){
   if (!current) return;
@@ -2074,6 +2265,7 @@ function updatePinResBtn(){
 }
 async function loadPin(p){
   closeDrawer();
+  setPinCursor(p);   /* going in order carries on from whatever was opened last */
   const seq = ++loadSeq;
   /* nothing to fetch for a bookmark that carries its own text: adopt it as the
      working custom text and switch to that mode, so ✎ edit and a later re-pin
@@ -2088,9 +2280,19 @@ async function loadPin(p){
     return;
   }
   showNotice('fetching the text…');
-  try { const pass = await fetchPassage(p.ref, p.translation || store.settings.translation);
+  const tr = pinTranslation(p);
+  try { const pass = await fetchPassage(p.ref, tr);
         if (seq === loadSeq) renderPassage(pass); }
-  catch(e){ if (seq === loadSeq) showNotice('Couldn’t load that bookmark right now.'); }
+  catch(e){
+    if (seq !== loadSeq) return;
+    /* a bookmark locked to a translation this browser has no key for fails on
+       its own account, and saying so beats a shrug about the bookmark */
+    showNotice(e && e.message === 'nokey'
+      ? 'This bookmark is set to the ' + (TR_NAMES[tr] || tr) + ', which needs a key of your own. ' +
+        '<span class="hint">Get one under <b>sources</b> in the <b>desk</b>, or set the bookmark to ' +
+        'another translation there.</span>'
+      : 'Couldn’t load that bookmark in the ' + (TR_NAMES[tr] || tr) + ' right now.');
+  }
 }
 
 function filteredPins(){
@@ -2099,30 +2301,138 @@ function filteredPins(){
   /* the words of a custom bookmark are searchable too — its title may be empty,
      and the text is the only thing that identifies it */
   return store.pins.filter(p =>
-    (p.ref + ' ' + (p.translation || '') + ' ' + (p.text || '')).toLowerCase().includes(q));
+    (p.ref + ' ' + (p.translation || '') + ' ' + (p.bundle || '') + ' ' + (p.text || ''))
+      .toLowerCase().includes(q));
 }
 
 function starCount(){ return store.pins.filter(p => p.starred).length; }
 
-function syncStarOnly(){
-  const b = $('starOnly'), n = starCount(), on = !!store.settings.starredOnly;
-  b.hidden = !store.pins.length;
-  b.classList.toggle('on', on);
-  b.setAttribute('aria-pressed', on ? 'true' : 'false');
-  b.querySelector('.lbl').textContent = (on && !n)
-    ? 'starred only — nothing starred yet, so pinned draws from all'
-    : 'in pinned mode, draw only from starred' + (n ? ' (' + n + ')' : '');
+function syncPinFrom(){
+  const wrap = $('pdraw'), sel = $('pinFrom');
+  wrap.hidden = !store.pins.length;
+  if (!store.pins.length) return;
+  const bs = bundles(), n = starCount();
+  let from = store.settings.pinFrom || 'all';
+  /* the shelf a setting points at can be taken apart under it */
+  if (from.startsWith('bundle:') && !bs.some(b => 'bundle:' + b === from)){
+    from = 'all'; store.settings.pinFrom = from; save();
+  }
+  const opt = (v, t)=>{ const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); };
+  sel.replaceChildren();
+  opt('all', 'everything · ' + store.pins.length);
+  opt('starred', '★ starred · ' + n);
+  for (const b of bs) opt('bundle:' + b, b + ' · ' + pinsInBundle(b).length);
+  sel.value = from;
+  const inOrder = store.settings.pinOrder === 'order';
+  $('ordOrder').classList.toggle('on', inOrder);
+  $('ordOrder').setAttribute('aria-pressed', inOrder ? 'true' : 'false');
+  $('ordShuffle').classList.toggle('on', !inOrder);
+  $('ordShuffle').setAttribute('aria-pressed', inOrder ? 'false' : 'true');
+  /* an empty pool is not an error — it only means the fallback is in force */
+  const empty = (from === 'starred' && !n) ||
+                (from.startsWith('bundle:') && !pinsInBundle(from.slice(7)).length);
+  $('pdrawNote').textContent = empty
+    ? 'nothing there yet, so pinned draws from everything.'
+    : inOrder ? 'in the order they are listed below, round and round.'
+              : 'every one of them once before any comes round again.';
 }
 
 /* renderPins() replaces the whole list, so the control that was just pressed
    no longer exists — find its replacement and hand focus back */
-function refocusPinRow(p){
+function refocusPinRow(p, sel){
   const row = [...els.pinList.querySelectorAll('.pinrow')].find(r => r.dataset.k === pinKey(p));
-  if (row) row.querySelector('.star').focus();
+  if (row) row.querySelector(sel || '.star').focus();
 }
 function focusDrawerTop(){
   const se = $('pinSearch');
   (se.hidden ? $('drawerClose') : se).focus();
+}
+
+/* a bookmark is read in whatever the menu says, and this is where that is
+   overruled for the one bookmark you want in a particular wording. The choices
+   are the menu's own — nothing else can be fetched. */
+function pinTrSelect(p, label){
+  const sel = document.createElement('select');
+  sel.className = 'ptr';
+  const locked = !!p.translation;
+  sel.classList.toggle('locked', locked);
+  sel.setAttribute('aria-label', 'translation for ' + label);
+  sel.title = locked
+    ? 'always read in the ' + (TR_NAMES[p.translation] || p.translation)
+    : 'read in whichever translation is chosen at the top of the screen';
+  const any = document.createElement('option');
+  any.value = ''; any.textContent = 'follows the menu';
+  sel.appendChild(any);
+  const opts = [...els.translation.options].map(o => o.value);
+  /* a lock imported from elsewhere may name a translation the menu never
+     offered; keep it selectable rather than silently reading as unlocked */
+  if (locked && !opts.includes(p.translation)) opts.push(p.translation);
+  for (const t of opts){
+    const o = document.createElement('option');
+    o.value = t; o.textContent = t.toUpperCase();
+    sel.appendChild(o);
+  }
+  sel.value = p.translation || '';
+  sel.addEventListener('change', ()=>{
+    p.translation = sel.value || null;
+    save(); renderPins(); updatePinBtn(); updatePinResBtn();
+    /* when the bookmark being set is the passage on screen and nothing has been
+       typed into it yet, show the change instead of saving it for next time */
+    const tr = pinTranslation(p);
+    if (!started && current && !current.custom && current.translation !== tr && findPinFor(current) === p)
+      loadRef(p.ref, false, null, tr);
+    refocusPinRow(p, '.ptr');
+  });
+  return sel;
+}
+
+/* one field, whether it is naming a new shelf or retitling one that exists */
+let newBundleFor = null, renamingBundle = null;
+function bundleField(value, label, commit, cancel){
+  const inp = document.createElement('input');
+  inp.className = 'pname'; inp.value = value || ''; inp.maxLength = BUNDLE_MAX;
+  inp.placeholder = 'name the bundle'; inp.spellcheck = false;
+  inp.setAttribute('aria-label', label);
+  inp.addEventListener('keydown', e=>{
+    /* the drawer answers escape by closing and the page behind it answers
+       almost everything — neither should hear what is being typed in here */
+    e.stopPropagation();
+    if (e.key === 'Enter'){ e.preventDefault(); commit(bundleName(inp.value)); }
+    else if (e.key === 'Escape'){ e.preventDefault(); cancel(); }
+  });
+  /* clicking away is a cancel, after a moment's grace so that the click lands
+     on whatever it was aimed at before the list is rebuilt underneath it */
+  inp.addEventListener('blur', ()=> setTimeout(cancel, 150));
+  return inp;
+}
+function focusPinName(){
+  const el = els.pinList.querySelector('.pname');
+  if (el){ el.focus(); el.select(); }
+}
+
+/* the shelf a bookmark sits on, changed in place. One shelf at a time: it is
+   what keeps the desk a list under headings rather than a web of tags. */
+function pinBundleSelect(p, label){
+  const sel = document.createElement('select');
+  sel.className = 'ptr pbundle';
+  /* the spelling the shelf is known by, which may not be this row's spelling */
+  const canon = bundles().find(b => sameBundle(p, b)) || p.bundle || '';
+  sel.classList.toggle('locked', !!canon);
+  sel.setAttribute('aria-label', 'bundle for ' + label);
+  sel.title = canon ? 'on the ' + canon + ' shelf'
+                    : 'on no shelf — put it on one to practise that grouping by itself';
+  const opt = (v, t)=>{ const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); };
+  opt('', 'no bundle');
+  for (const b of bundles()) opt('b:' + b, b);
+  opt('+', 'new bundle…');
+  sel.value = canon ? 'b:' + canon : '';
+  sel.addEventListener('change', ()=>{
+    if (sel.value === '+'){ newBundleFor = pinKey(p); renderPins(); focusPinName(); return; }
+    p.bundle = sel.value ? sel.value.slice(2) : null;
+    pinDeck = [];                   /* a different pool may be dealing now */
+    save(); renderPins(); refocusPinRow(p, '.pbundle');
+  });
+  return sel;
 }
 
 function pinRow(p){
@@ -2140,16 +2450,40 @@ function pinRow(p){
     save(); renderPins(); updateStarBtn();
     refocusPinRow(p);
   });
-  const btn = document.createElement('button'); btn.className = 'pr';
   /* an untitled custom bookmark is shown by its opening words, since there is
      no reference to name it by */
   const own = p.translation === 'custom';
   const label = own && p.ref === 'Your own text'
     ? '“' + cleanText(p.text || '').slice(0, 38) + '…”'
     : p.ref;
-  btn.innerHTML = escapeHtml(label) + '<small>' +
-    (own ? 'YOUR OWN TEXT' : escapeHtml((p.translation||'').toUpperCase())) + ' · type it</small>';
+  const main = document.createElement('div'); main.className = 'pmain';
+  const btn = document.createElement('button'); btn.className = 'pr';
+  btn.textContent = label;
+  btn.title = 'type this passage';
   btn.addEventListener('click', ()=> loadPin(p));
+  const meta = document.createElement('div'); meta.className = 'pmeta';
+  /* your own text is not in any translation, so there is nothing to choose */
+  if (own){
+    const tag = document.createElement('span'); tag.className = 'ptag';
+    tag.textContent = 'your own text';
+    meta.appendChild(tag);
+  } else {
+    meta.appendChild(pinTrSelect(p, label));
+  }
+  const dot = document.createElement('span'); dot.className = 'ptag'; dot.textContent = '·';
+  meta.appendChild(dot);
+  if (newBundleFor === pinKey(p)){
+    meta.appendChild(bundleField('', 'name a new bundle for ' + label,
+      name => {
+        newBundleFor = null;
+        if (name){ p.bundle = name; pinDeck = []; save(); }
+        renderPins(); refocusPinRow(p, '.pbundle');
+      },
+      () => { if (newBundleFor === pinKey(p)){ newBundleFor = null; renderPins(); } }));
+  } else {
+    meta.appendChild(pinBundleSelect(p, label));
+  }
+  main.appendChild(btn); main.appendChild(meta);
   const del = document.createElement('button'); del.className = 'del'; del.textContent = '✕';
   del.setAttribute('aria-label','remove bookmark');
   del.addEventListener('click', ()=>{
@@ -2157,22 +2491,55 @@ function pinRow(p){
     save(); renderPins(); updatePinBtn(); updatePinResBtn(); updateStarBtn();
     focusDrawerTop();   /* the row is gone; don't drop focus to <body> */
   });
-  row.appendChild(star); row.appendChild(btn); row.appendChild(del);
+  row.appendChild(star); row.appendChild(main); row.appendChild(del);
   return row;
 }
 
-function pinGroup(label){
-  const h = document.createElement('div'); h.className = 'pgroup'; h.textContent = label;
+function pinGroup(label, bundle){
+  const h = document.createElement('div'); h.className = 'pgroup';
+  if (bundle && renamingBundle === bundle){
+    h.appendChild(bundleField(bundle, 'rename the ' + bundle + ' bundle',
+      name => {
+        renamingBundle = null;
+        /* renaming onto a shelf that already exists merges the two, which is
+           the only sensible reading of giving them one name */
+        if (name){
+          if (store.settings.pinFrom === 'bundle:' + bundle) store.settings.pinFrom = 'bundle:' + name;
+          pinsInBundle(bundle).forEach(x => x.bundle = name);
+          pinDeck = []; save();
+        }
+        renderPins();
+      },
+      () => { if (renamingBundle === bundle){ renamingBundle = null; renderPins(); } }));
+    return h;
+  }
+  const nm = document.createElement('span'); nm.className = 'nm';
+  nm.textContent = bundle ? label + ' · ' + pinsInBundle(bundle).length : label;
+  h.appendChild(nm);
+  if (bundle){
+    const ren = document.createElement('button');
+    ren.textContent = '✎'; ren.title = 'rename this bundle';
+    ren.setAttribute('aria-label', 'rename the ' + bundle + ' bundle');
+    ren.addEventListener('click', ()=>{ renamingBundle = bundle; renderPins(); focusPinName(); });
+    const dis = document.createElement('button'); dis.className = 'dis';
+    dis.textContent = '✕'; dis.title = 'take this bundle apart — the bookmarks stay';
+    dis.setAttribute('aria-label', 'take apart the ' + bundle + ' bundle');
+    dis.addEventListener('click', ()=>{
+      pinsInBundle(bundle).forEach(x => x.bundle = null);
+      pinDeck = []; save(); renderPins(); focusDrawerTop();
+    });
+    h.appendChild(ren); h.appendChild(dis);
+  }
   return h;
 }
 
 function renderPins(){
   els.pinCount.textContent = store.pins.length ? ' · ⚑' + store.pins.length : '';
   $('pinSearch').hidden = !store.pins.length;
-  syncStarOnly();
+  syncPinFrom();
   if (!store.pins.length){
     $('pinMatch').hidden = true;
-    els.pinList.innerHTML = '<div class="empty">Nothing pinned yet.<br><br>While a passage is loaded, press the <b>⚑ pin</b> button next to its reference — then <b>☆</b> to star the ones you mean to memorise.</div>';
+    els.pinList.innerHTML = '<div class="empty">Nothing pinned yet.<br><br>While a passage is loaded, press the <b>⚑ pin</b> button next to its reference — then <b>☆</b> to star the ones you mean to memorise, or put them on a <b>bundle</b> to practise a grouping on its own.</div>';
     return;
   }
   const q = ($('pinSearch').value || '').trim();
@@ -2183,14 +2550,23 @@ function renderPins(){
     els.pinList.innerHTML = '<div class="empty">No bookmarks match “' + escapeHtml(q) + '”.</div>';
     return;
   }
-  /* starred bookmarks rise to the top, under their own heading */
-  const starred = shown.filter(p => p.starred), rest = shown.filter(p => !p.starred);
   const frag = document.createDocumentFragment();
-  const grouped = starred.length && rest.length;
-  if (grouped) frag.appendChild(pinGroup('★ STARRED'));
-  starred.forEach(p => frag.appendChild(pinRow(p)));
-  if (grouped) frag.appendChild(pinGroup('EVERYTHING ELSE'));
-  rest.forEach(p => frag.appendChild(pinRow(p)));
+  if (!bundles().length){
+    /* nothing shelved: starred bookmarks rise to the top under their own
+       heading, which is the whole arrangement until a bundle exists */
+    const starred = shown.filter(p => p.starred), rest = shown.filter(p => !p.starred);
+    const grouped = starred.length && rest.length;
+    if (grouped) frag.appendChild(pinGroup('★ STARRED'));
+    starred.forEach(p => frag.appendChild(pinRow(p)));
+    if (grouped) frag.appendChild(pinGroup('EVERYTHING ELSE'));
+    rest.forEach(p => frag.appendChild(pinRow(p)));
+  } else {
+    /* shelf by shelf, in the order pinned mode walks them */
+    for (const g of arrangePins(shown)){
+      frag.appendChild(pinGroup(g.name || 'ON NO SHELF', g.name || null));
+      g.pins.forEach(p => frag.appendChild(pinRow(p)));
+    }
+  }
   els.pinList.replaceChildren(frag);
 }
 
@@ -2267,6 +2643,21 @@ function closeDrawer(){ els.drawer.classList.remove('open'); focusGhost(); }
 
 /* an imported position is clamped to the canon, so a hand-edited or
    older file can't leave the quill pointing at a book that doesn't exist */
+/* an imported file names its own settings, and two of them steer what pinned
+   mode does — a pool that isn't one of the offered kinds, or an order this app
+   has never had, would sit in the store unnoticed until the mode behaved oddly */
+function sanitizeSettings(st){
+  const out = Object.assign({}, DEFAULT_SETTINGS, st && typeof st === 'object' ? st : null);
+  /* an export from before the pools existed carries the switch they replaced */
+  if (out.starredOnly && (!st || !st.pinFrom)) out.pinFrom = 'starred';
+  delete out.starredOnly;
+  const from = String(out.pinFrom || 'all');
+  out.pinFrom = (from === 'all' || from === 'starred' || from.startsWith('bundle:')) ? from : 'all';
+  out.pinOrder = out.pinOrder === 'order' ? 'order' : 'shuffled';
+  out.pinCursor = typeof out.pinCursor === 'string' ? out.pinCursor : '';
+  return out;
+}
+
 function sanitizeScribe(sc){
   const out = Object.assign({}, DEFAULT_SCRIBE, sc && typeof sc === 'object' ? sc : null);
   out.book = Math.min(Math.max(0, out.book|0), CANON.length - 1);
@@ -2439,11 +2830,18 @@ els.pinCur.addEventListener('click', e=>{ togglePin(); releaseAfterPointer(e); }
 els.starCur.addEventListener('click', e=>{ toggleStar(); releaseAfterPointer(e); });
 $('btnPinRes').addEventListener('click', e=>{ togglePin(); releaseAfterPointer(e); });
 $('btnStarRes').addEventListener('click', e=>{ toggleStar(); releaseAfterPointer(e); });
-$('starOnly').addEventListener('click', ()=>{
-  store.settings.starredOnly = !store.settings.starredOnly;
+$('pinFrom').addEventListener('change', ()=>{
+  store.settings.pinFrom = $('pinFrom').value;
   pinDeck = [];                     /* the pool changed — deal a fresh shuffle */
   save(); renderPins();
 });
+function setPinOrder(o){
+  store.settings.pinOrder = o;
+  pinDeck = [];
+  save(); renderPins();
+}
+$('ordOrder').addEventListener('click', ()=> setPinOrder('order'));
+$('ordShuffle').addEventListener('click', ()=> setPinOrder('shuffled'));
 $('btnRepeat').addEventListener('click', ()=> repeatTest());
 $('btnNext').addEventListener('click', ()=> goNext());
 $('pinsBtn').addEventListener('click', openDrawer);
@@ -2687,13 +3085,20 @@ $('impFile').addEventListener('change', async ()=>{
     if (!j || typeof j !== 'object' || (!j.settings && !Array.isArray(j.pins)))
       throw new Error('shape');
     store = {
-      v: 2,
+      v: 4,
       keys: store.keys,          /* this browser's keys survive an import */
-      settings: Object.assign({}, DEFAULT_SETTINGS, j.settings),
+      settings: sanitizeSettings(j.settings),
+      /* an export made before bookmarks could follow the menu is freed the same
+         way a stored one is; a newer file already means what it says */
       pins: Array.isArray(j.pins)
-        ? j.pins.filter(p => p && typeof p.ref === 'string')
+        ? sanitizePins(j.pins.filter(p => p && typeof p.ref === 'string')
                 .map(p => {
-                  const q = {ref: p.ref, translation: p.translation, starred: !!p.starred};
+                  /* a lock is only honoured for a translation this app can
+                     fetch; anything else follows the menu like a new bookmark */
+                  const tr = p.translation === 'custom' ? 'custom'
+                           : (TRANSLATIONS[p.translation] ? p.translation : null);
+                  const q = {ref: p.ref, translation: tr, starred: !!p.starred,
+                             bundle: bundleName(p.bundle) || null};
                   /* a custom bookmark is its text; one that arrived without any
                      is an empty shell and is dropped below */
                   if (p.translation === 'custom'){
@@ -2702,7 +3107,7 @@ $('impFile').addEventListener('change', async ()=>{
                   }
                   return q;
                 })
-                .filter(p => p.translation !== 'custom' || p.text)
+                .filter(p => p.translation !== 'custom' || p.text), !(j.v >= 3))
         : [],
       scribe: sanitizeScribe(j.scribe),
       best: (j.best && typeof j.best.wpm === 'number') ? j.best : null,
@@ -2731,6 +3136,49 @@ els.veil.addEventListener('click', focusGhost);
 els.ghost.addEventListener('focus', ()=> els.veil.classList.remove('show'));
 els.ghost.addEventListener('blur', ()=>{
   if (chars.length && !finished) els.veil.classList.add('show');
+});
+
+/* ---------- the clipboard ----------
+   a paste used to arrive as one burst of input events: every character of it
+   went through onChar in a single tick, so the passage filled itself in, the
+   clock had barely started, and the run came back at a speed no one has ever
+   typed. Scripture here is copied out by hand — that is the whole exercise —
+   so the clipboard is turned away at the field, and pointed at the one place
+   text of your own does belong. */
+let flashT = null, flashClearT = null;
+function flashNote(html){
+  const el = $('flash');
+  el.innerHTML = html;
+  el.classList.add('show');
+  clearTimeout(flashT); clearTimeout(flashClearT);
+  flashT = setTimeout(hideFlash, 3600);
+}
+function hideFlash(){
+  const el = $('flash');
+  if (!el || !el.innerHTML) return;
+  clearTimeout(flashT);
+  el.classList.remove('show');
+  /* emptied only once it has faded, so the note doesn't vanish mid-transition
+     and doesn't sit in the live region afterwards to be read out again */
+  clearTimeout(flashClearT);
+  flashClearT = setTimeout(()=>{ if (!el.classList.contains('show')) el.innerHTML = ''; }, 260);
+}
+function refusePaste(e){
+  e.preventDefault();
+  /* a finished run and a notice have nothing to protect, and the typing surface
+     they would be shown over isn't on screen */
+  if (finished || !chars.length) return;
+  flashNote('This one is typed by hand — the clipboard is no help here.' +
+    (store.settings.mode === 'custom'
+      ? '<span class="hint">Press <b>✎ edit</b> to change the text itself.</span>'
+      : '<span class="hint">Text of your own goes under <b>custom</b>.</span>'));
+}
+els.ghost.addEventListener('paste', refusePaste);
+els.ghost.addEventListener('drop', refusePaste);
+/* the same refusal for the routes that reach the field without a paste event of
+   their own — a dropped selection, and the odd browser that only fires this */
+els.ghost.addEventListener('beforeinput', e=>{
+  if (e.inputType === 'insertFromPaste' || e.inputType === 'insertFromDrop') refusePaste(e);
 });
 
 els.ghost.addEventListener('keydown', e=>{
