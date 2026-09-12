@@ -1790,6 +1790,11 @@ function sameAnchor(a, b){
 }
 
 function pushTrail(p){
+  /* the mode is stamped on the passage as it goes into the log, because a
+     passage is not the whole of what was on screen: the bar, the footer hints
+     and what tab does next are all read from the mode, so stepping back has to
+     step back into it as well */
+  p.mode = store.settings.mode;
   /* the same reference re-rendered (a translation swap, or a repeat) refreshes
      the entry in place instead of stacking a near-duplicate — and so does a
      window resized around the same anchor, which is one passage being read
@@ -1804,11 +1809,37 @@ function pushTrail(p){
   renderTrail();
 }
 
+/* stepping back into the mode the passage was drawn in. Without this the bar
+   went on highlighting whichever mode the reader had since switched to, and
+   everything downstream of it followed: the footer offered the wrong "next",
+   and tab — which asks the mode what next means — fetched a fresh passage out
+   of that other mode rather than walking the log forward. Scribe was the worst
+   of it: stepping back onto a scribe passage from another mode and finishing it
+   left the quill where it stood, because only scribe mode moves it. */
+function restoreMode(p){
+  if (!p.mode) return;           /* logged before the stamp existed */
+  /* the suggestion list belongs to the reference field and to what was last
+     typed into it; neither survives the step */
+  closeSuggest();
+  /* the reference field is part of passage mode, not decoration beside it: it
+     names what is on screen, and it is what tab hands back to be edited */
+  if (p.mode === 'passage' && p.reference !== store.settings.passageRef){
+    store.settings.passageRef = p.reference;
+    els.refInput.value = p.reference;
+  }
+  store.settings.mode = p.mode;
+  save();
+  syncBar();
+}
+
 function goTrail(delta){
   const i = trailIdx + delta;
   if (i < 0 || i >= trail.length) return false;
   trailIdx = i;
   loadSeq++;                     /* a fetch still in flight must not overwrite this */
+  /* before the render, so the pin button, the quill line and the hints it draws
+     are all asking the mode the passage actually belongs to */
+  restoreMode(trail[i]);
   renderPassage(trail[i], true);
   renderTrail();                 /* fromTrail skips pushTrail, so refresh the controls here */
   reclaimFocus();
