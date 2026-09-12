@@ -1316,6 +1316,34 @@ function suggestRef(str){
     }], note: refNote(r) || (fuzzy ? chapterFact(r) : '')};
   }
 
+  /* a reference in the middle of being typed: the separator has arrived but what
+     follows it hasn't. REF_RE wants a whole reference and is anchored, so "John
+     3:" failed it outright and the box fell all the way back to the book row —
+     announcing how many chapters John has at the exact moment the chapter was
+     already settled and a verse was being chosen. The same went for "Psalm 23-"
+     and "Matthew 5:1-6:". So read what is settled and go on showing that: the
+     chapter stays in view, with the verse count the number being typed has to
+     fit. The rows describe `settled`, not what was typed, so the tail is handed
+     back to any completion among them and the caller is told not to fill the
+     field from a row that is only standing in until the rest arrives. */
+  /* a trailing colon says the number before it is a chapter. Where that number
+     came after a dash — "Matthew 5:1-6:", a range running on into chapter 6 —
+     taking the colon off alone would re-read the 6 as a verse and stand there
+     describing verses 1-6, a different passage from the one being typed. So the
+     number goes with the colon, back to the part that has not changed meaning. */
+  let settled = raw.replace(/[-\u2013\u2014]\s*\d+\s*:\s*$/, '');
+  /* otherwise it is the separator itself, waiting on whatever comes after it */
+  if (settled === raw) settled = raw.replace(/[\s:\u2013\u2014-]+$/, '');
+  if (settled !== raw){
+    const held = suggestRef(settled);
+    if (held.rows.length || held.note){
+      const tail = raw.slice(settled.length);
+      held.rows.forEach(r => { if (r.kind === 'book') r.rest = (r.rest || '') + tail; });
+      held.partial = true;
+      return held;
+    }
+  }
+
   /* a chapter that book hasn't got. Worth saying plainly: the number is the
      mistake, and how many there are is the fact that fixes it */
   if (read.error === 'chapter')
@@ -1946,7 +1974,7 @@ async function newTest(opts){
     let p;
     if (s.mode === 'passage'){
       const typed = (els.refInput.value || s.passageRef || '').trim();
-      if (!typed){ showNotice('Enter a passage above — <b>John 3:16-18</b>, <b>Psalm 23</b>, a whole chapter like <b>Luke 15</b>, or a range across two: <b>Matthew 5:1-6:4</b>. <span class="hint">Short forms are fine — <b>jn 3:16</b>, <b>ps 23</b>, <b>1 thess 5</b> — and press <b>↓</b> in the box to see what it makes of what you have typed.</span>'); return; }
+      if (!typed){ showNotice('Enter a passage above — <b>John 3:16-18</b>, <b>Psalm 23</b>, a whole chapter like <b>Luke 15</b>, or a range across two: <b>Matthew 5:1-6:4</b>. <span class="hint">Short forms are fine — <b>jn 3:16</b>, <b>ps 23</b>, <b>1 thess 5</b> — and press <b>↓</b> in the box to see what it makes of what you have typed, <b>tab</b> to have it written out in full.</span>'); return; }
       /* one grammar for every translation. Whatever was typed is resolved here
          and sent on in canonical form, so "1 thess 5:16" means the same thing
          whether the text comes from bible-api or from a publisher — and the
@@ -2759,13 +2787,16 @@ els.translation.addEventListener('change', ()=>{
    takes what is highlighted, escape puts it away. With nothing highlighted,
    enter still just searches what was typed, which is how it behaved before any
    of this existed. */
-let sugRows = [], sugSel = -1;
+/* `sugPartial` is set while the rows stand for a reference still being typed —
+   "John 3:" showing John 3. They are there to be read, not to be filled into
+   the field: completing one would take back off the very colon just typed. */
+let sugRows = [], sugSel = -1, sugPartial = false;
 
 function closeSuggest(){
   $('refSuggest').hidden = true;
   els.refInput.setAttribute('aria-expanded', 'false');
   els.refInput.removeAttribute('aria-activedescendant');
-  sugRows = []; sugSel = -1;
+  sugRows = []; sugSel = -1; sugPartial = false;
 }
 
 function markSuggest(){
@@ -2787,11 +2818,11 @@ function markSuggest(){
 
 function renderSuggest(){
   if (store.settings.mode !== 'passage') return closeSuggest();
-  const {rows, note} = suggestRef(els.refInput.value);
+  const {rows, note, partial} = suggestRef(els.refInput.value);
   if (!rows.length && !note) return closeSuggest();
   const box = $('refSuggest');
   box.innerHTML = '';
-  sugRows = rows; sugSel = -1;
+  sugRows = rows; sugSel = -1; sugPartial = !!partial;
   rows.forEach((r, i) => {
     const b = document.createElement('button');
     b.type = 'button';
@@ -2835,6 +2866,24 @@ function applySuggest(i){
   newTest();
 }
 
+/* tab completes, where enter commits. It writes the row into the field and
+   leaves the reader standing in it, so a shorthand can be filled out and then
+   added to — "jn 3" completed to "John 3" and a verse typed onto the end —
+   without the passage being fetched out from under the typing. Nothing is
+   filled in from a partial row, because what it stands for is already in the
+   field; tab then does what tab does elsewhere and moves on. */
+function completeSuggest(i){
+  const r = sugRows[i];
+  if (!r || sugPartial) return false;
+  if (r.kind === 'book'){ applySuggest(i); return true; }
+  if (!r.ref || r.ref === els.refInput.value) return false;
+  els.refInput.value = r.ref;
+  const end = r.ref.length;
+  els.refInput.setSelectionRange(end, end);
+  renderSuggest();
+  return true;
+}
+
 $('refGo').addEventListener('click', ()=>{ closeSuggest(); newTest(); });
 els.refInput.addEventListener('input', renderSuggest);
 /* a press inside the popover keeps focus, so a real blur means done with it */
@@ -2849,6 +2898,10 @@ els.refInput.addEventListener('keydown', e=>{
         : Math.max(-1, sugSel - 1);
       markSuggest();
     }
+    e.preventDefault(); e.stopPropagation(); return;
+  }
+  /* shift+tab is left alone: it is the way back out of the field */
+  if (e.key === 'Tab' && open && !e.shiftKey && completeSuggest(sugSel >= 0 ? sugSel : 0)){
     e.preventDefault(); e.stopPropagation(); return;
   }
   if (e.key === 'Enter'){
