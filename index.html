@@ -336,6 +336,11 @@
   .spct{font-size:.6rem;color:var(--faint);letter-spacing:.1em;margin-bottom:.5rem}
   .drow{display:flex;gap:.5rem;flex-wrap:wrap}
   .dmsg{font-size:.65rem;color:var(--mut);margin-top:.7rem;line-height:1.6;min-height:1em}
+  .dopt{display:flex;align-items:flex-start;gap:.5rem;font-size:.65rem;color:var(--mut);
+        line-height:1.6;margin-bottom:.9rem;max-width:34rem;cursor:pointer}
+  .dopt input{margin:.15rem 0 0;accent-color:var(--gilt);flex:none}
+  .dopt b{color:var(--ink)}
+  .dopt:focus-within{outline:1px solid var(--gilt);outline-offset:3px;border-radius:3px}
   .krow{margin-bottom:1.4rem}
   .krow label{display:block;font-size:.66rem;letter-spacing:.12em;color:var(--gilt-dim);margin-bottom:.35rem;text-transform:uppercase}
   .kset{color:var(--gilt);letter-spacing:.08em}
@@ -645,7 +650,7 @@
     </div>
 
     <div class="plain">
-      <p><b>Your keys stay here.</b> They are saved in this browser only — never sent anywhere but to the publisher they belong to, and deliberately left out of the export file, because a key is yours and not meant to be passed on.</p>
+      <p><b>Your keys stay here.</b> They are saved in this browser only, and never sent anywhere but to the publisher they belong to. The one way out is the export file under <b>data</b>, which carries them so you can set up a second browser of your own — which is also why that file is yours to keep rather than to pass on. It can be exported without them.</p>
     </div>
 
     <div class="dsec">
@@ -659,7 +664,11 @@
   </div>
 
   <div class="pane" data-tab="data" id="pane-data" role="tabpanel" aria-labelledby="tab-data" tabindex="0" hidden>
-    <div class="sub">Settings, bookmarks, best, and recent runs — download them as JSON and import the file on another device. Publisher keys and stored text are left out.</div>
+    <div class="sub">Settings, bookmarks, best, recent runs, and your publisher keys — download them as JSON and import the file on another device to arrive set up exactly as you are here. Cached text is left out; it is fetched again as it is needed.</div>
+    <label class="dopt" for="expKeys">
+      <input type="checkbox" id="expKeys" checked>
+      <span><b>Carry the publisher keys.</b> They travel so the other browser needs no setting up. That makes the file a password — keep it to yourself, and untick this to export a copy fit to pass on to someone else.</span>
+    </label>
     <div class="drow">
       <button class="rbtn" id="expBtn">export json</button>
       <button class="rbtn" id="impBtn">import json</button>
@@ -3092,18 +3101,56 @@ bindKeyField('nivKey', 'apibible', 'nivMsg', 'nivSet', 'nivHow');
 /* the NLT needs no key, so its optional field stays folded until asked for */
 bindKeyField('nltKey', 'nlt', 'nltMsg', 'nltSet', null);
 
+/* the fields show what the store held when they were bound, so an import has to
+   put the new keys in front of them. Deliberately not done by firing the events
+   the fields listen for: those read the box and write it back to the store,
+   which would push the stale key straight over the imported one. */
+const KEY_FIELDS = [['esvKey', 'esv', 'esvSet'], ['nivKey', 'apibible', 'nivSet'],
+                    ['nltKey', 'nlt', 'nltSet']];
+function syncKeyFields(){
+  for (const [inputId, slot, markId] of KEY_FIELDS){
+    const v = store.keys[slot] || '';
+    $(inputId).value = v;
+    $(markId).hidden = !v;
+  }
+}
+
 /* ---------- export / import ---------- */
+/* the keys worth carrying — nivBible is not one. It is a bible id looked up
+   with the API.Bible key rather than anything the reader was given, and it
+   belongs to the account that key opens, so it is left behind for the other
+   browser to derive against whatever key it ends up holding. */
+function portableKeys(src){
+  const out = {};
+  for (const slot of ['esv', 'apibible', 'nlt']){
+    const v = cleanKey(src && src[slot]).key;
+    if (v && looksLikeKey(v)) out[slot] = v;
+  }
+  return out;
+}
+
 $('expBtn').addEventListener('click', ()=>{
-  /* keys are left out on purpose — Crossway's terms forbid passing one on, and
-     an export is a file people mail to themselves and to each other */
-  const bare = Object.assign({}, store); delete bare.keys;
+  /* the keys travel, because the point of the file is to arrive on a second
+     browser already set up, and a translation that needs a key is not set up
+     without one. It does make the file a password: Crossway ask that an ESV
+     key not be passed on, so the box above is what separates moving your own
+     setup from handing it to somebody else, and the note below says which of
+     the two was just downloaded. */
+  const bare = Object.assign({}, store);
+  const keys = $('expKeys').checked ? portableKeys(store.keys) : {};
+  const held = Object.keys(keys).length;
+  if (held) bare.keys = keys; else delete bare.keys;
   const blob = new Blob([JSON.stringify(bare, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'versewright-data.json';
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=> URL.revokeObjectURL(a.href), 10000);
-  $('dataMsg').textContent = 'Downloaded versewright-data.json.';
+  /* naming the count rather than saying "with keys" — someone who ticked the
+     box but has no key set should not be told the file holds one */
+  $('dataMsg').textContent = 'Downloaded versewright-data.json. ' + (held
+    ? 'It carries ' + tally(held, 'publisher key') + ' — keep it as you would a password.'
+    : 'No publisher keys are in it.');
 });
 $('impBtn').addEventListener('click', ()=> $('impFile').click());
 $('impFile').addEventListener('change', async ()=>{
@@ -3114,9 +3161,18 @@ $('impFile').addEventListener('change', async ()=>{
     const j = JSON.parse(await f.text());
     if (!j || typeof j !== 'object' || (!j.settings && !Array.isArray(j.pins)))
       throw new Error('shape');
+    /* keys the file carries win; where it carries none, this browser's stand.
+       An export made without them must not cost the browser importing it the
+       keys it already has — nothing was said about them, so nothing changes. */
+    const incoming = portableKeys(j.keys);
+    const keys = Object.assign({}, store.keys, incoming);
+    /* a different API.Bible key opens a different catalogue, so the remembered
+       NIV id belonged to the old account and may not exist in the new one */
+    if (keys.apibible !== store.keys.apibible) keys.nivBible = '';
+    const gained = Object.keys(incoming).filter(k => incoming[k] !== store.keys[k]).length;
     store = {
       v: 4,
-      keys: store.keys,          /* this browser's keys survive an import */
+      keys: keys,
       settings: sanitizeSettings(j.settings),
       /* an export made before bookmarks could follow the menu is freed the same
          way a stored one is; a newer file already means what it says */
@@ -3147,7 +3203,10 @@ $('impFile').addEventListener('change', async ()=>{
     save(); syncBar(); renderPins(); renderScribe(); renderAttribution(null, false);
     els.refInput.value = store.settings.passageRef || '';
     const n = store.pins.length;
-    $('dataMsg').textContent = 'Imported — ' + n + ' bookmark' + (n===1?'':'s') + ', settings, and records restored. This replaced what was here before.';
+    syncKeyFields();           /* the boxes are showing what this browser held a moment ago */
+    $('dataMsg').textContent = 'Imported — ' + n + ' bookmark' + (n===1?'':'s') + ', settings, and records restored' +
+      (gained ? ', along with ' + tally(gained, 'publisher key') : '') +
+      '. This replaced what was here before.';
     newTest();
   } catch(e){
     $('dataMsg').textContent = 'That file couldn’t be read as Versewright data — nothing was changed.';
