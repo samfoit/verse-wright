@@ -62,6 +62,13 @@
   .bar button:hover{color:var(--paper)}
   .bar button.on{color:var(--gilt)}
   #pinsBtn .cnt{color:var(--gilt-dim)}
+  /* not a mode anyone chooses, but a state they are in. It is here only while a
+     recall is under way, it says how much of one is left, and it carries its
+     own way out rather than making the reader find one */
+  .memchip{border-color:var(--gilt-dim)}
+  .memchip #memChipText{color:var(--gilt);padding:.28rem .1rem .28rem .5rem;white-space:nowrap}
+  .memchip button{color:var(--faint);padding:.28rem .4rem;font-size:.7rem}
+  .memchip button:hover{color:var(--red)}
   .bar button:disabled,.bar button:disabled:hover{color:var(--line);cursor:default}
   .navgrp button{font-size:.9rem;line-height:1;padding:.18rem .5rem}
   .bar button:focus-visible, .bar select:focus-visible, .bar input:focus-visible,
@@ -103,7 +110,17 @@
 
   /* ---------- stage ---------- */
   main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 max(1.2rem, 4vw) 4rem;width:100%}
+  /* the passage being typed wants the middle of the screen, because that is where
+     somebody's eyes already are. A finished page is a document and starts at the
+     top of the sheet instead, or it floats in the void with the run above it */
+  body:has(.results.show) main{justify-content:flex-start;padding-top:clamp(1.5rem,5vh,3.5rem)}
   .stage{width:min(95rem,100%);position:relative}
+  /* and the finished page is narrower than the desk it is written on. Scoped to
+     the results screen on purpose, and written after the rule it refines: the
+     measure belongs to a column of prose being read back, not to the passage
+     being typed, which wants every inch of the screen it can get and had it
+     taken away by an earlier pass of mine. */
+  body:has(.results.show) .stage{width:min(68rem,100%)}
 
   .refline{
     font-family:var(--serif-display);font-style:italic;font-size:1.15rem;color:var(--gilt);
@@ -115,7 +132,9 @@
   .pinbtn{font-family:var(--mono);font-style:normal;font-size:.65rem;background:none;border:none;color:var(--faint);cursor:pointer;letter-spacing:.05em;padding:.1rem .2rem}
   .pinbtn:hover{color:var(--gilt)}
   .pinbtn.pinned{color:var(--gilt)}
-  .starbtn{font-family:var(--mono);font-style:normal;font-size:.8rem;line-height:1;background:none;border:none;color:var(--faint);cursor:pointer;padding:.1rem .2rem}
+  /* the same type as the pin beside it. Left bigger and wordless it read as a
+     mark somebody had dropped on the line rather than as a thing to press */
+  .starbtn{font-family:var(--mono);font-style:normal;font-size:.65rem;background:none;border:none;color:var(--faint);cursor:pointer;letter-spacing:.05em;padding:.1rem .2rem}
   .starbtn:hover{color:var(--gilt)}
   .starbtn.on{color:var(--gilt)}
 
@@ -128,6 +147,24 @@
   .sprog{flex:none;width:min(18rem,42vw);height:2px;background:var(--line);border-radius:1px;overflow:hidden}
   .sprog i{display:block;height:100%;background:var(--gilt);width:0;transition:width .3s ease}
   .scribeline .pos{color:var(--gilt-dim)}
+  /* the memory line uses the same rail as the quill's: how far through the
+     passage the steps have come, which step is in hand, and how much of the
+     text is showing */
+  .mstage{color:var(--gilt);border:1px solid var(--line);border-radius:4px;padding:.1rem .35rem}
+  .mdue{color:var(--gilt-dim)}
+  /* reciting the whole passage and carrying the step you were dealt are the same
+     exercise at two sizes, so they are one switch rather than two modes, and it
+     stands on screen the whole time instead of being offered once and then lost.
+     Built like the desk's own order switch, because it does the same kind of job */
+  .mswap{display:flex;gap:.15rem;flex:none}
+  .mswap button{
+    font:inherit;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);background:none;border:1px solid var(--line);border-radius:5px;
+    padding:.2rem .42rem;cursor:pointer;
+  }
+  .mswap button:hover{color:var(--paper)}
+  .mswap button[aria-pressed="true"]{color:var(--gilt);border-color:var(--gilt-dim)}
+  .mswap button:focus-visible{outline:1px solid var(--gilt);outline-offset:1px}
 
   .textwrap{position:relative;overflow:hidden;cursor:text}
   #text{
@@ -139,6 +176,25 @@
   }
   .word{display:inline}
   .ch{transition:color .05s linear}
+  /* a cue taken away. The glyph goes and the box stays exactly where it stood,
+     so the caret arithmetic in placeCaret and the line grid in sizeWrap never
+     learn that a passage is masked at all. Declared above .ch.ok deliberately:
+     the two have equal specificity, so the later rule wins, and a letter
+     recalled rightly writes itself back into view while a wrong one still
+     shows red. The passage is drawn by the hand that remembers it. */
+  .ch.hid{color:transparent;text-decoration:underline;
+          text-decoration-color:var(--line);text-decoration-thickness:1px;
+          text-underline-offset:5px;
+          /* the rule under a hidden word says how long that word is, so it has to
+             be one unbroken rule. Underlines skip around descenders by default,
+             and a letter being invisible does not stop its outline driving the
+             skip: the g in "forgave" carved the rule in two and the gap read as
+             a word boundary, so the passage appeared to be asking for two short
+             words where it wanted one long one. */
+          text-decoration-skip-ink:none}
+  /* a letter recalled is a letter no longer hidden, so the rule under it goes
+     too and the word finishes looking like any other word on the page */
+  .ch.hid.ok{text-decoration:none}
   .ch.ok{color:var(--paper)}
   .ch.bad{color:var(--red);text-decoration:underline;text-decoration-color:var(--red);text-decoration-thickness:1px;text-underline-offset:6px}
   .vn{
@@ -199,12 +255,18 @@
   .ccount{font-size:.62rem;color:var(--faint);letter-spacing:.08em}
   .ccount.over{color:var(--red)}
 
-  .notice{font-size:.78rem;color:var(--mut);line-height:1.7}
+  /* a notice stands where a passage stood, but it is not one. The passage runs
+     the width of the desk because it is being copied out; a notice is a short
+     thing being read, so it takes a measure and sits in the middle of the page
+     rather than stranded against its left edge. The prose inside stays ranged
+     left, because centred prose is prose nobody can read. */
+  .notice{font-size:.78rem;color:var(--mut);line-height:1.7;
+          max-width:38em;margin-inline:auto}
   .notice em{color:var(--red);font-style:normal}
   .notice .hint{color:var(--faint);display:block;margin-top:.5rem}
 
   /* ---------- while a passage is on its way ---------- */
-  .bookload{display:flex;flex-direction:column;align-items:flex-start;gap:1.15rem}
+  .bookload{display:flex;flex-direction:column;align-items:center;gap:1.15rem}
   .bk{position:relative;width:8rem;height:5.3rem;perspective:36rem}
   /* the two leaves lying open. They are filled rather than outlined, because a
      hairline rectangle on this ground is not a book, it is barely a shape. The
@@ -247,32 +309,110 @@
 
   /* ---------- results ---------- */
   .results{display:none;text-align:left}
-  .results.show{display:block}
-  .bigwpm{font-family:var(--serif-display);font-weight:500;font-size:5.5rem;line-height:1;color:var(--gilt)}
-  .bigwpm small{font-family:var(--mono);font-size:.8rem;color:var(--faint);letter-spacing:.15em;margin-left:.6rem}
-  .pbtag{display:inline-block;font-size:.62rem;letter-spacing:.15em;color:var(--leather);background:var(--gilt);border-radius:3px;padding:.15rem .5rem;vertical-align:.5rem;margin-left:.8rem}
-  .rref{font-family:var(--serif-display);font-style:italic;font-size:1.2rem;color:var(--paper);margin:.9rem 0 1rem}
-  .rread{margin:0 0 1.5rem;border-left:1px solid var(--line);padding-left:1rem}
+  /* two columns, and the second one is a margin rather than a sidebar: it has no
+     ground, no border and no radius, only apparatus set small in the mono face.
+     The slack left over at the right is the page's outer margin. */
+  .results.show{
+    display:grid;align-items:start;justify-content:start;
+    grid-template-columns:minmax(0,40rem) minmax(10rem,15rem);
+    gap:clamp(1.8rem,6vw,6rem);
+  }
+  /* the head of the page, ruled off from the text under it */
+  .rhead{border-bottom:1px solid var(--line);padding-bottom:.7rem;margin-bottom:1.5rem}
+  .rref{font-family:var(--serif-display);font-style:italic;font-size:1.45rem;color:var(--paper);line-height:1.2}
+  .rsrc{font-family:var(--mono);font-size:.63rem;letter-spacing:.1em;color:var(--faint);margin-top:.4rem}
+
+  .rmargin{display:flex;flex-direction:column;gap:2.1rem;font-family:var(--mono);min-width:0}
+  /* the versal: the one figure on the page big enough to read across a room, and
+     the only thing in the margin set in the display face */
+  .rspeed{font-family:var(--serif-display);font-weight:500;font-size:clamp(3.2rem,6vw,4.4rem);
+          line-height:1;color:var(--gilt);margin:0}
+  /* Cormorant sets figures old-style, so 9, 7, 4 and 3 all drop below the
+     baseline. A tight line-height here put the label through their tails */
+  .rspeed span{display:block;line-height:1.15}
+  .rspeed small{display:block;font-family:var(--mono);font-size:.6rem;font-weight:400;
+                letter-spacing:.1em;color:var(--faint);margin-top:.3rem;line-height:1.5}
+  .pbtag{align-self:flex-start;font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;
+         color:var(--leather);background:var(--gilt);border-radius:3px;padding:.2rem .45rem;margin-top:-1.5rem}
+  /* the gloss: a value and the word for it, on two aligned columns, so it reads
+     as "97% accurate" rather than as a form with five empty fields */
+  .rgloss{display:grid;grid-template-columns:auto 1fr;gap:.4rem .65rem;font-size:.73rem;margin:0}
+  .rgloss dt{color:var(--paper);font-variant-numeric:tabular-nums;text-align:right}
+  .rgloss dd{color:var(--faint);margin:0}
+  /* below the breakpoint there is no room for a margin beside the text, so the
+     apparatus lies down under it as a single band instead. This block sits after
+     the rules it overrides on purpose: at equal specificity the later one wins,
+     and in front of them it was handing a column layout a cross-axis alignment
+     meant for a row, which quietly shoved the whole margin to the right. */
+  @media (max-width:900px){
+    .results.show{grid-template-columns:minmax(0,1fr);gap:2.4rem}
+    .rmargin{flex-direction:row;flex-wrap:wrap;align-items:flex-end;gap:1.4rem 3rem}
+    .rspeed{font-size:2.9rem}
+    .pbtag{margin-top:0;align-self:center}
+    .rruns{flex:1 1 12rem}
+  }
+  .rread{margin:0 0 1.6rem;border-left:1px solid var(--line);padding-left:1.1rem}
   .rtext{
-    font-family:var(--serif-read);font-size:clamp(.95rem, .85rem + .3vw, 1.1rem);
-    line-height:1.78;color:var(--paper);max-height:min(38vh,17rem);overflow-y:auto;
+    font-family:var(--serif-read);font-size:clamp(1rem, .9rem + .3vw, 1.15rem);
+    line-height:1.8;color:var(--paper);max-height:min(46vh,22rem);overflow-y:auto;
+    /* the whole point. 34em of a serif is about 66 characters, which is a measure
+       somebody can actually read; without it this ran the width of the stage */
+    max-width:34em;
   }
   .rtext .vn{font-size:.6em}
   .rtext:focus-visible{outline:1px solid var(--gilt);outline-offset:4px}
   .rtally{margin-top:.75rem;font-size:.68rem;color:var(--faint);letter-spacing:.04em}
   .rtally b{color:var(--gilt-dim);font-weight:500}
-  .rstats{display:flex;gap:2.2rem;font-size:.72rem;color:var(--mut);flex-wrap:wrap}
-  .rstats b{display:block;font-size:1.05rem;color:var(--paper);font-weight:500;margin-top:.2rem}
   .ractions{margin-top:1.8rem;display:flex;gap:.6rem;flex-wrap:wrap}
   .rbtn{font:inherit;font-size:.72rem;color:var(--paper);background:var(--raised);border:1px solid var(--line);border-radius:6px;padding:.5rem .9rem;cursor:pointer}
   .rbtn:hover{border-color:var(--gilt-dim);color:var(--gilt)}
   .rbtn.on{color:var(--gilt);border-color:var(--gilt-dim)}
   .rbtn kbd{color:var(--faint);margin-left:.45rem;font-size:.62rem}
-  .rhist{margin-top:2.2rem;border-top:1px solid var(--line);padding-top:1rem;font-size:.68rem;color:var(--faint)}
-  .rhist h3{font-size:.62rem;font-weight:400;letter-spacing:.18em;color:var(--gilt-dim);margin-bottom:.6rem}
-  .rhist .row{display:flex;gap:1.2rem;padding:.18rem 0}
-  .rhist .row .w{width:4.5rem;color:var(--paper)}
-  .rhist .row .a{width:4rem}
+  /* how the recall scored, and what each answer would buy. The typing has
+     already worked one out and it comes up chosen; the row is here to be
+     overruled, not to be filled in from nothing */
+  /* the only place the deck ever asks for anything, and it asks on a screen the
+     reader arrived at by finishing something. Never mid-passage, never on the
+     way in */
+  .moffer{margin-top:1.8rem;border-top:1px solid var(--line);padding-top:1.1rem}
+  .moffer .orow{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;
+                font-size:.72rem;color:var(--mut);line-height:1.65}
+  .moffer .orow + .orow{margin-top:.9rem;border-top:1px solid var(--line);padding-top:.9rem}
+  .moffer p{flex:1;min-width:13rem}
+  .moffer b{color:var(--gilt-dim);font-weight:500}
+  .moffer .no{background:none;border:none;font:inherit;font-size:.66rem;
+              color:var(--faint);cursor:pointer;padding:.5rem .3rem}
+  .moffer .no:hover{color:var(--paper)}
+  .moffer .no:focus-visible{outline:1px solid var(--gilt);outline-offset:2px}
+  .grades{margin-top:1.8rem;border-top:1px solid var(--line);padding-top:1.1rem}
+  .grades h3{font-family:var(--serif-display);font-style:italic;font-size:.95rem;
+             font-weight:500;color:var(--gilt-dim);margin-bottom:.7rem}
+  .growl{display:flex;gap:.5rem;flex-wrap:wrap}
+  .gbtn{
+    font:inherit;font-size:.7rem;color:var(--mut);background:var(--raised);
+    border:1px solid var(--line);border-radius:6px;padding:.45rem .7rem;cursor:pointer;
+    display:flex;flex-direction:column;align-items:flex-start;gap:.18rem;min-width:5.4rem;
+  }
+  .gbtn:hover{color:var(--paper);border-color:var(--gilt-dim)}
+  .gbtn.on{color:var(--gilt);border-color:var(--gilt)}
+  .gbtn .gi{font-size:.58rem;color:var(--faint);letter-spacing:.06em}
+  .gbtn.on .gi{color:var(--gilt-dim)}
+  .gbtn:focus-visible{outline:1px solid var(--gilt);outline-offset:2px}
+  .gnote{font-size:.63rem;color:var(--faint);line-height:1.65;margin-top:.75rem}
+  .gnote b{color:var(--gilt-dim);font-weight:500}
+  /* the last few runs. Seven rows of three columns said "am I getting faster?"
+     worse than one strip does, and took twenty times the room to say it. One
+     series, so no legend: the run just finished is in gold and the ones behind
+     it are the rule colour, and every bar carries its own figures on hover. */
+  .rruns{margin:0}
+  /* fit-content so the rule under the bars ends with the last bar. Left to fill
+     the column it ran on past them, which read as a chart that had failed to
+     draw rather than as a short record */
+  .rbars{display:flex;align-items:flex-end;gap:2px;height:2.7rem;width:fit-content;
+         border-bottom:1px solid var(--line)}
+  .rbars i{width:17px;background:var(--line);min-height:3px;border-radius:3px 3px 0 0}
+  .rbars i.now{background:var(--gilt)}
+  .rruns figcaption{margin-top:.6rem;font-size:.62rem;color:var(--faint);line-height:1.65}
 
   /* ---------- pins drawer ---------- */
   .drawer{
@@ -352,7 +492,8 @@
     color:var(--gilt-dim);margin-bottom:.35rem;
   }
   .pdrow{display:flex;align-items:center;gap:.4rem}
-  #pinFrom{width:auto;flex:1;min-width:0;font-size:.66rem;padding:.35rem .5rem}
+  #pinFrom, #roundFrom{width:auto;flex:1;min-width:0;font-size:.66rem;padding:.35rem .5rem}
+  .pdrow .rbtn{flex:none;font-size:.66rem;padding:.36rem .6rem}
   .pord{display:flex;gap:.15rem;flex:none}
   .pord button{
     font:inherit;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;
@@ -384,6 +525,41 @@
   }
   .dsec select:focus-visible, .pane select:focus-visible{outline:1px solid var(--gilt);outline-offset:1px}
   .spos{font-size:.75rem;color:var(--paper);margin-bottom:.35rem}
+  /* one line per passage being learnt: how far the steps have come, and when
+     the next of them is wanted back */
+  .mrow{display:flex;align-items:center;gap:.5rem;padding:.5rem 0;border-bottom:1px solid var(--line);font-size:.72rem}
+  .mrow .mm{flex:1 1 100%;min-width:0}
+  .mrow .mr{width:100%;background:none;border:none;font:inherit;color:var(--paper);text-align:left;cursor:pointer;padding:.2rem 0}
+  .mrow .mr:hover{color:var(--gilt)}
+  /* the drawer is narrow and these lines are several facts long, so they wrap
+     rather than squeezing each other into columns a word wide */
+  .mrow .ms{display:flex;align-items:center;flex-wrap:wrap;gap:.45rem;row-gap:.15rem;
+            margin-top:.2rem;font-size:.6rem;color:var(--faint);letter-spacing:.08em}
+  .mrow .ms .on{color:var(--gilt-dim)}
+  .mrow .sprog{width:3.4rem}
+  .mrow .sd{color:var(--gilt);letter-spacing:.06em}
+  .mrow .dr, .mrow .sy{background:none;border:none;color:var(--faint);cursor:pointer;font:inherit;font-size:.6rem;padding:.2rem .3rem;flex:none}
+  .mrow .sy:hover{color:var(--gilt)}
+  .mrow .dr:hover{color:var(--red)}
+  .mrow .sy:focus-visible, .mrow .dr:focus-visible{outline:1px solid var(--gilt);outline-offset:1px}
+  .mnum{display:flex;gap:1.4rem;margin:.2rem 0 1rem}
+  .mnum div{font-size:.6rem;color:var(--faint);letter-spacing:.1em;text-transform:uppercase}
+  .mnum b{display:block;font-family:var(--serif-display);font-size:1.5rem;font-weight:600;
+          letter-spacing:0;text-transform:none;color:var(--gilt);line-height:1.25}
+  /* the month ahead, one bar a day. Not a chart so much as a horizon: it is
+     there to show whether a day is about to land heavy */
+  .fcast{display:flex;align-items:flex-end;gap:1px;height:2.6rem;margin:.3rem 0 .5rem;
+         border-bottom:1px solid var(--line)}
+  /* every day gets a tick whether or not anything falls on it, or a quiet month
+     reads as a broken chart rather than as a quiet month */
+  .fcast i{flex:1;background:var(--line);min-height:3px;border-radius:1px 1px 0 0}
+  .fcast i.due{background:var(--gilt-dim)}
+  .fcast i.today{background:var(--gilt)}
+  .mopt{display:flex;align-items:center;gap:.5rem;margin-top:.7rem;font-size:.63rem;color:var(--faint)}
+  .mopt label{flex:1;letter-spacing:.08em}
+  /* the two dials share a right edge: one holds a number and the other a
+     phrase, and left to themselves they sat at wildly different widths */
+  .mopt select{width:auto;flex:none;font-size:.66rem;padding:.3rem .5rem;min-width:8.5rem}
   .spct{font-size:.6rem;color:var(--faint);letter-spacing:.1em;margin-bottom:.5rem}
   .drow{display:flex;gap:.5rem;flex-wrap:wrap}
   .dmsg{font-size:.65rem;color:var(--mut);margin-top:.7rem;line-height:1.6;min-height:1em}
@@ -466,7 +642,7 @@
 
   @media (max-width:640px){
     header{padding:1rem 1.2rem .4rem}
-    .bigwpm{font-size:3.8rem}
+    .rspeed{font-size:3.1rem}
     #refInput{width:10rem}
   }
   @media (prefers-reduced-motion:reduce){
@@ -534,6 +710,10 @@
     <button id="navBack" title="back to the previous passage (shift+tab)" aria-label="previous passage">‹</button>
     <button id="navFwd" title="forward again (tab)" aria-label="next passage">›</button>
   </div>
+  <div class="grp memchip" id="memChip" role="status" hidden>
+    <span id="memChipText"></span>
+    <button id="memChipOut" title="back to what you were doing" aria-label="leave the recall">✕</button>
+  </div>
   <div class="grp"><button id="pinsBtn" aria-haspopup="dialog">desk<span class="cnt" id="pinCount"></span></button></div>
 </nav>
 
@@ -547,11 +727,21 @@
         <span class="tr backtag" id="backTag" hidden></span>
         <button class="pinbtn" id="editCustom" title="change this text" hidden>✎ edit</button>
         <button class="pinbtn" id="pinCur" title="pin this passage" hidden>⚑ pin</button>
-        <button class="starbtn" id="starCur" hidden>☆</button>
+        <button class="starbtn" id="starCur" hidden>☆ star</button>
       </div>
       <div class="scribeline" id="scribeLine" hidden>
         <div class="sprog"><i id="sprogFill"></i></div>
         <span id="sprogText"></span>
+      </div>
+      <div class="scribeline" id="memLine" hidden>
+        <div class="sprog" id="mprogRail"><i id="mprogFill"></i></div>
+        <span id="mprogText"></span>
+        <span class="mstage" id="mStage"></span>
+        <span class="mswap" id="mSwap" role="group" aria-label="how much of it to attempt" hidden>
+          <button id="mSwapStep" title="as much of it as the steps have reached, with the usual help on screen" aria-pressed="true">this much</button>
+          <button id="mSwapAll" title="type every verse of it with nothing on screen" aria-pressed="false">the whole thing</button>
+        </span>
+        <span class="mdue" id="mDueText"></span>
       </div>
       <div class="textwrap" id="textwrap">
         <div id="text"></div>
@@ -575,29 +765,45 @@
     </div>
 
     <div class="results" id="results">
-      <div class="bigwpm"><span id="rWpm">0</span><small>WPM</small><span class="pbtag" id="pbTag" hidden>BEST</span></div>
-      <div class="rref" id="rRef"></div>
-      <div class="rread" id="rRead" hidden>
-        <div class="rtext" id="rText" tabindex="0" role="region" aria-label="the passage you wrote"></div>
-        <div class="rtally" id="rTally"></div>
+      <!-- the text block. A measured column with the words you wrote in it, ruled
+           down its left edge and along the head, the way a page is ruled before
+           it is written on. Nothing in here is apparatus. -->
+      <div class="rpage">
+        <div class="rhead">
+          <div class="rref" id="rRef"></div>
+          <div class="rsrc" id="rSrc"></div>
+        </div>
+        <div class="rread" id="rRead" hidden>
+          <div class="rtext" id="rText" tabindex="0" role="region" aria-label="the passage you wrote"></div>
+          <div class="rtally" id="rTally"></div>
+        </div>
+        <div class="ractions">
+          <button class="rbtn" id="btnRepeat">repeat this passage<kbd>enter</kbd></button>
+          <button class="rbtn" id="btnNext">next passage<kbd>tab</kbd></button>
+          <button class="rbtn" id="btnPinRes">⚑ pin it</button>
+          <button class="rbtn" id="btnStarRes">☆ star it</button>
+        <button class="rbtn" id="btnTestRes" hidden>test me on this</button>
+        </div>
+        <div class="grades" id="grades" hidden>
+          <h3 id="gradesHead">How did that go?</h3>
+          <div class="growl" id="gradeRow" role="group" aria-label="how the recall went"></div>
+          <div class="gnote" id="gradeNote"></div>
+        </div>
+        <div class="moffer" id="memOffer" hidden></div>
       </div>
-      <div class="rstats">
-        <div>accuracy<b id="rAcc"></b></div>
-        <div>raw<b id="rRaw"></b></div>
-        <div>errors<b id="rErr"></b></div>
-        <div>time<b id="rTime"></b></div>
-        <div>characters<b id="rChars"></b></div>
-      </div>
-      <div class="ractions">
-        <button class="rbtn" id="btnRepeat">repeat this passage<kbd>enter</kbd></button>
-        <button class="rbtn" id="btnNext">next passage<kbd>tab</kbd></button>
-        <button class="rbtn" id="btnPinRes">⚑ pin it</button>
-        <button class="rbtn" id="btnStarRes" hidden>☆ star it</button>
-      </div>
-      <div class="rhist" id="rhist" hidden>
-        <h3>RECENT RUNS</h3>
-        <div id="histRows"></div>
-      </div>
+
+      <!-- and the margin, where a scribe's apparatus goes: the speed as a versal
+           figure, the gloss under it, and the record of the last few runs. No
+           panel, no border, no ground of its own. It is margin, not sidebar. -->
+      <aside class="rmargin">
+        <p class="rspeed"><span id="rWpm">0</span><small>words a minute</small></p>
+        <p class="pbtag" id="pbTag" hidden>best yet</p>
+        <dl class="rgloss" id="rGloss"></dl>
+        <figure class="rruns" id="rhist" hidden>
+          <div class="rbars" id="histBars" role="img" aria-labelledby="histCap"></div>
+          <figcaption id="histCap"></figcaption>
+        </figure>
+      </aside>
     </div>
   </div>
 </main>
@@ -616,12 +822,13 @@
   <div class="tabs" role="tablist" aria-label="desk sections">
     <button role="tab" data-tab="bookmarks" id="tab-bookmarks" aria-controls="pane-bookmarks" aria-selected="true">bookmarks</button>
     <button role="tab" data-tab="scribe" id="tab-scribe" aria-controls="pane-scribe" aria-selected="false" tabindex="-1">scribe</button>
+    <button role="tab" data-tab="memory" id="tab-memory" aria-controls="pane-memory" aria-selected="false" tabindex="-1">memory</button>
     <button role="tab" data-tab="sources" id="tab-sources" aria-controls="pane-sources" aria-selected="false" tabindex="-1">sources</button>
     <button role="tab" data-tab="data" id="tab-data" aria-controls="pane-data" aria-selected="false" tabindex="-1">data</button>
   </div>
 
   <div class="pane" data-tab="bookmarks" id="pane-bookmarks" role="tabpanel" aria-labelledby="tab-bookmarks" tabindex="0">
-    <div class="sub">Pinned passages live in this browser, and <i>pinned</i> as the source cycles through them. A bookmark is the passage, not one publisher’s wording of it: it is read in whichever translation the menu is set to, unless you fix one under it here. <b>Star</b> the ones you are committing to memory and they rise to the top. Put bookmarks on a <b>bundle</b>, the psalms you are learning or a course through the epistles, and pinned mode can draw from that shelf alone.</div>
+    <div class="sub">Pinned passages live in this browser, and <i>pinned</i> as the source cycles through them. A bookmark is the passage, not one publisher’s wording of it: it is read in whichever translation the menu is set to, unless you fix one under it here. <b>Star</b> the ones you want to learn by heart: they rise to the top, and the app starts bringing them back on a schedule, with less of the text on screen each time until you are typing them from memory rather than copying them. Put bookmarks on a <b>bundle</b>, the psalms you are learning or a course through the epistles, and pinned mode can draw from that shelf alone.</div>
     <div class="pdraw" id="pdraw" hidden>
       <label class="plbl" for="pinFrom">in pinned mode, draw from</label>
       <div class="pdrow">
@@ -647,6 +854,41 @@
     <select id="scribeJump" aria-label="jump to a book"></select>
     <div class="drow" style="margin-top:.6rem">
       <button class="rbtn" id="scribeReset">start over at Genesis</button>
+    </div>
+  </div>
+
+  <div class="pane" data-tab="memory" id="pane-memory" role="tabpanel" aria-labelledby="tab-memory" tabindex="0" hidden>
+    <div class="sub">This is the record of what you are learning by heart. There is nothing at the top of the screen to switch on. Type a passage out a few times and you will be asked whether you want to learn it, and when a passage is due for review the app tells you after whatever you have just typed. Starring a bookmark starts it right away; unstarring stops it. Each time a passage comes back, less of it is shown, until nothing is shown and you are typing it from memory.</div>
+    <div class="sub">A passage longer than a couple of verses is learned a little at a time: the first two verses, then the first four, then the first six, and so on until you are typing the whole thing. The line above any passage you are memorising says how far in you are, counted in verses, and the bar beside it fills as you learn more.</div>
+    <div class="mnum">
+      <div>due now<b id="mDueN">0</b></div>
+      <div>still learning<b id="mLearnN">0</b></div>
+      <div>know by heart<b id="mKnownN">0</b></div>
+    </div>
+    <div class="pdraw" id="memDraw" hidden>
+      <label class="plbl" for="roundFrom">type from memory</label>
+      <div class="pdrow">
+        <select id="roundFrom"></select>
+        <button class="rbtn" id="memAll">start</button>
+      </div>
+      <div class="pnote" id="memAllNote"></div>
+    </div>
+    <div class="spct">THE MONTH AHEAD</div>
+    <div class="fcast" id="mFcast"></div>
+    <div class="pnote" id="mFcastNote"></div>
+    <div class="mopt">
+      <label for="memNew">new verses a day</label>
+      <select id="memNew" aria-label="how many new verses to take on each day"></select>
+    </div>
+    <div class="mopt">
+      <label for="memRet">aim to remember</label>
+      <select id="memRet" aria-label="how much you aim to remember"></select>
+    </div>
+    <div class="pnote">Aiming higher means shorter gaps and more writing for the same passages. Nine in ten is the usual balance between the two.</div>
+    <div class="pnote">A passage counts as one you <b>know by heart</b> once you have typed every verse of it with nothing on screen. Use <b>the whole thing</b> on the switch above any passage, or <b>from memory</b> beside one below, whenever you think you know it. Getting it wrong changes nothing, so it is always worth trying.</div>
+    <div class="dsec">
+      <h3>WHAT YOU ARE LEARNING</h3>
+      <div id="memList"></div>
     </div>
   </div>
 
@@ -723,7 +965,7 @@
   </div>
 
   <div class="pane" data-tab="data" id="pane-data" role="tabpanel" aria-labelledby="tab-data" tabindex="0" hidden>
-    <div class="sub">Settings, bookmarks, best, recent runs, how many times you have written each passage, and your publisher keys. Download them as JSON and import the file on another device to arrive set up exactly as you are here. Cached text is left out; it is fetched again as it is needed.</div>
+    <div class="sub">Settings, bookmarks, best, recent runs, how many times you have written each passage, how far you have come with the ones you are learning by heart, and your publisher keys. Download them as JSON and import the file on another device to arrive set up exactly as you are here. Cached text is left out; it is fetched again as it is needed.</div>
     <label class="dopt" for="expKeys">
       <input type="checkbox" id="expKeys" checked>
       <span><b>Carry the publisher keys.</b> They travel so the other browser needs no setting up. That makes the file a password, so keep it to yourself. Untick this to export a copy fit to pass on to someone else.</span>
@@ -747,10 +989,12 @@ const LS_KEY = 'versewright.v1';
 const LS_KEY_LEGACY = 'scriptorium.v1';
 const DEFAULT_SETTINGS = {mode:'daily', count:2, translation:'web', passageRef:'John 3:16-18',
                          pinFrom:'all', pinOrder:'shuffled', pinCursor:'', deskTab:'bookmarks',
-                         customText:'', customTitle:''};
+                         customText:'', customTitle:'', memNew:2, memAim:0.9, memFrom:'',
+                         roundFrom:'all'};
 const DEFAULT_SCRIBE = {book:0, chapter:1, verse:1, done:false};
 let store = { settings:Object.assign({}, DEFAULT_SETTINGS), pins:[], best:null, history:[],
-              scribe:Object.assign({}, DEFAULT_SCRIBE), keys:{}, counts:{} };
+              scribe:Object.assign({}, DEFAULT_SCRIBE), keys:{}, counts:{},
+              memory:{items:{}, said:{}, day:'', fresh:0} };
 try {
   const raw = localStorage.getItem(LS_KEY) || localStorage.getItem(LS_KEY_LEGACY);
   if (raw) { const s = JSON.parse(raw); store = Object.assign(store, s);
@@ -777,6 +1021,13 @@ store.scribe = Object.assign({}, DEFAULT_SCRIBE, store.scribe);
 store.keys = Object.assign({esv:'', apibible:'', nlt:'', nivBible:''}, store.keys);
 /* a store saved before passages were counted simply has none yet */
 if (!store.counts || typeof store.counts !== 'object') store.counts = {};
+/* and one saved before anything was learnt by heart has an empty deck. Like the
+   tally above, this needs no version bump: an absent deck and a new deck are
+   the same deck, so there is nothing to convert */
+if (!store.memory || typeof store.memory !== 'object') store.memory = {};
+store.memory = Object.assign({items:{}, said:{}, day:'', fresh:0}, store.memory);
+if (!store.memory.items || typeof store.memory.items !== 'object') store.memory.items = {};
+if (!store.memory.said || typeof store.memory.said !== 'object') store.memory.said = {};
 
 /* the first open of each day lands on the verse of the day; once it has been
    seen, a mode the user picks holds for the rest of the day */
@@ -831,6 +1082,9 @@ let chars = [];          // [{el, c}]
 let idx = 0;
 let started = false, finished = false, startTime = 0;
 let keystrokes = 0, errors = 0, correctChars = 0;
+/* words given back, and characters rubbed out. Neither changes the speed on the
+   board; both are what tells a passage recalled from one dragged out of hints */
+let peeks = 0, rubouts = 0;
 let current = null;      // {reference, translation, verses:[{verse,text}]}
 let lineH = 40;
 let caretIdleTimer = null;
@@ -889,22 +1143,44 @@ function renderPassage(p, fromTrail){
     frag.appendChild(wEl);
   });
   els.text.appendChild(frag);
+  /* the cues go up here, in the same breath as the text goes in, and not further
+     down in resetRun.
+
+     .ch carries a 50ms colour transition. sizeWrap below reads lineHeight and an
+     offsetTop, which forces the browser to resolve style for the spans just
+     added; that resolution fixes their "before" colour as the unmasked one, so
+     masking them afterwards animated the whole passage from legible to invisible
+     over 50ms. Switching to a recital flashed the entire text, which on a
+     passage you are about to recite from memory is the one thing the screen must
+     never do. Masked before the first look, the spans are simply born hidden and
+     there is nothing to animate from. */
+  applyMask(maskFor(p));
 
   /* unhide before measuring: while #typing is display:none every offset reads
      0, which parks the caret at x=0, left of the verse number, as if the
      number were the first thing to type */
   showTyping();
   sizeWrap();
-  resetRun();
+  resetRun();             /* which is also what puts the cues up, if any */
   reclaimFocus();
   renderHints();          /* after chars and finished settle, not before */
+  renderMemLine();
 }
 
 function resetRun(){
   hideFlash();
   idx = 0; started = false; finished = false;
   keystrokes = 0; errors = 0; correctChars = 0;
-  chars.forEach(c => c.el.className = 'ch');
+  peeks = 0; rubouts = 0;
+  /* only the marks the attempt left come off. The mask belongs to the passage
+     rather than to the attempt, so it is never taken down and put back up */
+  chars.forEach(c => c.el.classList.remove('ok', 'bad'));
+  /* and a word given back during the last attempt is taken back: escape on a
+     half-recalled passage must not leave it standing easier than it was */
+  applyMask(maskFor(current));
+  $('grades').hidden = true;
+  $('memOffer').hidden = true;
+  memPending = null;
   els.text.style.transform = 'translateY(0)';
   els.caret.hidden = chars.length === 0;
   placeCaret();
@@ -955,6 +1231,7 @@ function onChar(c){
 
 function onBackspace(word){
   if (finished || idx === 0) return;
+  rubouts++;
   const step = ()=>{
     idx--;
     const cur = chars[idx];
@@ -973,7 +1250,6 @@ function finish(){
   const ms = performance.now() - startTime;
   const min = ms/60000;
   const wpm = Math.round((correctChars/5)/min);
-  const raw = Math.round((idx/5)/min);
   const acc = keystrokes ? Math.round(100*(keystrokes-errors)/keystrokes) : 100;
   const secs = (ms/1000).toFixed(1);
 
@@ -991,17 +1267,18 @@ function finish(){
 
   $('rWpm').textContent = wpm;
   $('pbTag').hidden = !isPB;
-  $('rRef').textContent = current.reference + ' · ' + (TR_NAMES[current.translation]||current.translation);
-  $('rAcc').textContent = acc + '%';
-  $('rRaw').textContent = raw + ' wpm';
-  $('rErr').textContent = errors;
-  $('rTime').textContent = secs + 's';
-  $('rChars').textContent = chars.length;
+  /* the reference and the printing it came from, on two lines rather than joined
+     by a middle dot: they are two different facts and one of them is the title */
+  $('rRef').textContent = current.reference;
+  $('rSrc').textContent = TR_NAMES[current.translation] || current.translation;
+  renderGloss(acc, secs);
   renderRead(current, times);
   updatePinResBtn();
   updateStarBtn();
   renderHistory();
   syncResultActions();
+  memReport();            /* nothing at all unless this was a memorised step */
+  renderMemOffer();       /* and the two things the deck ever asks for */
 
   els.typing.style.display = 'none';
   els.results.classList.add('show');
@@ -1013,7 +1290,7 @@ function finish(){
    footer hint and the results button can never drift apart. */
 const NEXT_LABEL = {daily:'a random passage', random:'next passage',
                     passage:'change the passage', pinned:'next bookmark', scribe:'carry on',
-                    custom:null};
+                    memorise:'next passage', custom:null};
 
 /* whether tab has anywhere to go from where we are standing */
 function nextLabel(){
@@ -1021,6 +1298,9 @@ function nextLabel(){
   const m = store.settings.mode;
   if (m === 'scribe' && !finished) return null;            /* the quill moves only on completion */
   if (m === 'pinned' && !store.pins.length) return null;   /* nothing pinned to advance through */
+  /* a round has its own sequence, and it outlasts the day's work */
+  if (m === 'memorise' && memRound.length) return 'next passage';
+  if (m === 'memorise' && !memLeft()) return null;         /* the deck is carried for today */
   if (m === 'custom') return null;    /* one text, and it is already on screen */
   return NEXT_LABEL[m] || 'next passage';
 }
@@ -1049,6 +1329,11 @@ function renderHints(){
   if (trailIdx > 0) out.push('<b>shift+tab</b> back');
   /* enter is bound only once a run is complete */
   if (finished) out.push('<b>enter</b> ' + (m === 'daily' ? 'type it again' : 'repeat'));
+  /* the two keys that belong to a masked passage, each named only where it does
+     something: one while there is still text hidden, the other once there is a
+     score on screen to be argued with */
+  if (maskStage && !finished) out.push('<b>ctrl+space</b> show a word');
+  if (finished && !$('grades').hidden && $('gradeRow').innerHTML) out.push('<b>1-4</b> score it');
   /* esc stays bound the whole time and "restart" is true from any point in a
      passage, so it is listed as soon as one is loaded rather than appearing
      under the reader's hands at the first keystroke */
@@ -1058,17 +1343,59 @@ function renderHints(){
 
 function goNext(){
   const m = store.settings.mode;
+  if (m === 'memorise' && memRound.length){ memNextInRound(); return; }
   if (m === 'daily'){ setMode('random'); return; }
   if (m === 'passage'){ els.refInput.focus(); els.refInput.select(); return; }
   newTest();
 }
 
+/* the gloss in the margin: three figures, each with the word for what it is.
+
+   There were five, and two of them were not worth the room. Raw speed is the
+   same number as the headline whenever accuracy is decent, so it was the same
+   fact printed twice; the character count is a description of a passage that is
+   sitting on the screen above it being read. What is left is the three things
+   that say how the run actually went. */
+function renderGloss(acc, secs){
+  const g = [[acc + '%', 'accurate'],
+             [String(errors), errors === 1 ? 'slip' : 'slips'],
+             [secs, +secs === 1 ? 'second' : 'seconds']];
+  $('rGloss').innerHTML = g.map(([v, w]) =>
+    '<dt>' + escapeHtml(v) + '</dt><dd>' + w + '</dd>').join('');
+}
+
+/* the last few runs, as one strip.
+
+   This was seven rows of three columns, which made it the biggest thing on the
+   screen in order to answer one question ("am I getting faster?") that it
+   answered badly, while repeating the same reference down the page. A bar to a
+   run says it at a glance and in a fortieth of the room.
+
+   One series, so there is nothing to put in a legend. The run just finished is
+   the point and the ones behind it are context, so that one is gold and the rest
+   are the rule colour; the figures for each live on the bar itself rather than
+   being printed over the top of it. */
 function renderHistory(){
-  const rows = store.history.map(h =>
-    '<div class="row"><span class="w">'+h.wpm+' wpm</span><span class="a">'+h.acc+'%</span><span>'+escapeHtml(h.ref)+'</span></div>'
+  const h = store.history;
+  $('rhist').hidden = h.length < 2;
+  if (h.length < 2) return;
+  /* the store keeps newest first; a strip reads left to right in time, so the
+     run just finished is the last bar rather than the first */
+  const runs = h.slice().reverse();
+  const top = Math.max(1, ...runs.map(r => r.wpm));
+  $('histBars').innerHTML = runs.map((r, i) =>
+    /* the figures ride on the bar rather than being printed over it. The strip
+       itself carries one accessible name, the caption's, because eight bars read
+       out one at a time is noise where a range is the whole point */
+    '<i' + (i === runs.length - 1 ? ' class="now"' : '') +
+    ' style="height:' + Math.round(100 * r.wpm / top) + '%"' +
+    ' title="' + escapeHtml(r.ref) + ', ' + r.wpm + ' words a minute, ' + r.acc + '% accurate"></i>'
   ).join('');
-  $('histRows').innerHTML = rows;
-  $('rhist').hidden = store.history.length < 2;
+  const lo = Math.min(...runs.map(r => r.wpm));
+  /* the run just finished is the gold bar and it is on the right, which says
+     which way time runs without a word about it */
+  $('histCap').textContent = (lo === top ? top + ' wpm' : lo + ' to ' + top + ' wpm') +
+    ' across your last ' + tally(runs.length, 'run') + '.';
 }
 function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -1123,6 +1450,10 @@ function sanitizeCounts(c){
     if (!(total > 0)) continue;
     const fresh = v.day === day;
     out[String(k).trim().toLowerCase()] = {
+      /* whether the offer to learn this one by heart has been turned down. It
+         rides on the tally because the tally already knows this passage, already
+         drops the oldest, and already travels in the export file */
+      no: v.no ? 1 : 0,
       total: Math.min(total, 1e7),
       today: fresh ? Math.max(0, Math.min(Math.round(v.today) || 0, total)) : 0,
       day: fresh ? day : '',
@@ -1602,9 +1933,15 @@ function showNotice(html){
   els.refText.textContent = ''; els.trText.textContent = ''; els.pinCur.hidden = true;
   els.starCur.hidden = true;
   $('vodTag').hidden = true;
+  $('memLine').hidden = true;
   els.caret.hidden = true;
   renderScribe();
   els.text.innerHTML = '<div class="notice">'+html+'</div>';
+  /* sizeWrap clamps the typing surface to a whole number of lines of the passage
+     in hand. A notice has no lines to count, and left at the last passage's
+     height it would be read through a letterbox and a long one cut off at the
+     bottom, which is the worst possible moment to lose the end of a sentence */
+  els.wrap.style.maxHeight = '';
   chars = [];
   renderAttribution(store.settings.translation, false);
   showTyping();
@@ -2159,6 +2496,25 @@ async function newTest(opts){
          to go and get */
       usedTr = pinTranslation(pin);
       p = pinPassage(pin) || await fetchPassage(pin.ref, usedTr);
+    } else if (s.mode === 'memorise'){
+      if (!memStarred().length){
+        showNotice('<b>You are not learning anything by heart yet.</b> Type a passage out a ' +
+                   'few times and this app will ask whether you want to learn it; starring a ' +
+                   'bookmark starts one right away. <span class="hint">Either way it comes ' +
+                   'back a couple of verses at a time, on the days you are about to forget it, ' +
+                   'with less of the text on screen each time.</span>');
+        return;
+      }
+      p = await memPassage();
+      if (!p){
+        showNotice('<b>Nothing due.</b> You have reviewed everything that was due today. ' +
+                   '<span class="hint">You can still type out what you already know, any time: ' +
+                   'open the <b>desk</b>, then <b>memory</b>, and press <b>start</b> under ' +
+                   '<b>type from memory</b>. The month ahead and the setting for how many new ' +
+                   'verses a day to learn are there too.</span>');
+        return;
+      }
+      usedTr = p.translation;
     } else if (s.mode === 'scribe'){
       if (store.scribe.done){
         showNotice('<b>The whole canon, copied.</b> Genesis to Revelation, ' + TOTAL_CH.toLocaleString() +
@@ -2335,6 +2691,11 @@ function sanitizePins(list, freeing){
   return out;
 }
 function findPinFor(p){
+  /* a memorised step is a slice of a bookmark and not a bookmark of its own, so
+     the pin and the star beside it answer for the passage it was cut from.
+     Without this, reviewing Psalm 23 offers to pin "Psalms 23:1-4" as though
+     the psalm on the desk were nothing to do with it */
+  if (p && p.memory) return store.pins.find(x => pinKey(x) === p.memory.ref) || null;
   const k = passageKey(p);
   return k ? store.pins.find(x => pinKey(x) === k) : null;
 }
@@ -2440,9 +2801,15 @@ function setPinCursor(p){
 }
 function togglePin(){
   if (!current) return;
-  const k = passageKey(current);
-  if (findPinFor(current)){
-    store.pins = store.pins.filter(p => pinKey(p) !== k);
+  /* removed by identity rather than by key, because the bookmark a passage
+     answers to is not always the one its own reference would name: a memorised
+     step answers to the passage it was cut from */
+  const had = findPinFor(current);
+  if (had){
+    const k = pinKey(had);
+    store.pins = store.pins.filter(p => p !== had);
+    memPrune();                  /* a bookmark gone is its steps gone with it */
+    memQueue = memQueue.filter(q => q.ref !== k);
   } else if (current.custom){
     /* the text travels with the bookmark: there is nowhere to fetch it from */
     store.pins.push({ref: current.reference, translation: 'custom',
@@ -2451,34 +2818,86 @@ function togglePin(){
     /* no translation: the bookmark follows the menu until it is locked to one */
     store.pins.push({ref: current.reference, translation: null});
   }
-  save(); updatePinBtn(); updatePinResBtn(); updateStarBtn(); renderPins();
+  save(); updatePinBtn(); updatePinResBtn(); updateStarBtn(); renderPins(); syncBar();
 }
 
-/* starring marks a bookmark as one to keep close, for memorising or for
-   coming back to often; it only applies to a passage that is already pinned */
+/* the star is how a passage is taken up for learning by heart, so it is offered
+   on every passage and not only on one that has already been bookmarked. It used
+   to appear only after pinning, which meant that the way to start learning
+   something was to file it first and then find a glyph with no words on it: on
+   the screen after a run there was no visible option at all. Pressing it now
+   bookmarks the passage if it isn't already, because nobody who has just decided
+   to learn something by heart wants to be told to file it first. */
 function toggleStar(){
   if (!current) return;
-  const p = findPinFor(current);
-  if (!p) return;
-  p.starred = !p.starred;
-  save(); updateStarBtn(); renderPins();
+  const had = findPinFor(current);
+  if (!had || !had.starred){
+    const pin = had || memPinFor(current);
+    /* a reference this app can't place in the canon has no verses to count, so
+       there is nothing for the schedule to divide into or to measure */
+    if (!memStepList(memSpan(pin)).length){
+      flashNote('<b>This one can’t be learnt here.</b> The app can’t place that ' +
+                'reference in the canon, so it has no verses to count. ' +
+                '<span class="hint">Bookmarking it still works.</span>');
+      return;
+    }
+    if (!had) store.pins.push(pin);
+    pin.starred = true;
+  } else {
+    had.starred = false;
+  }
+  /* the deck has just changed size, so whatever it was about to deal is stale.
+     Anything already learnt is kept either way: unstarring only stops it */
+  const now = findPinFor(current);
+  memQueue = memQueue.filter(q => q.ref !== (now ? pinKey(now) : ''));
+  save();
+  updateStarBtn(); updatePinBtn(); updatePinResBtn(); renderPins(); syncBar();
+  if (els.drawer.classList.contains('open') && store.settings.deskTab === 'memory') renderMemoryPane();
 }
 function updateStarBtn(){
   if (!current) return;
-  const p = findPinFor(current);
-  const on = !!(p && p.starred);
-  els.starCur.hidden = !p;
-  els.starCur.textContent = on ? '★' : '☆';
+  const on = !!(findPinFor(current) || {}).starred;
+  /* the mark keeps its own name; what it is for is said in the tooltip, and the
+     button beside it is what makes the point of it plain */
+  els.starCur.hidden = false;
+  /* "pin / pinned" is the pattern the line already uses, so the star follows it */
+  els.starCur.textContent = on ? '★ starred' : '☆ star';
   els.starCur.classList.toggle('on', on);
-  els.starCur.title = on ? 'remove the star' : 'star this bookmark, keeping it close for memorising';
-  els.starCur.setAttribute('aria-label', on ? 'unstar this bookmark' : 'star this bookmark');
+  els.starCur.title = on
+    ? 'unstar it, and stop learning it by heart'
+    : 'star it, to learn it by heart: it comes back for review with less of it on screen each time';
+  els.starCur.setAttribute('aria-label', on ? 'unstar this passage' : 'star this passage');
   els.starCur.setAttribute('aria-pressed', on ? 'true' : 'false');
   const rb = $('btnStarRes');
-  rb.hidden = !p;
+  rb.hidden = false;
   rb.textContent = on ? '★ starred' : '☆ star it';
   rb.classList.toggle('on', on);
+  rb.title = els.starCur.title;
   rb.setAttribute('aria-pressed', on ? 'true' : 'false');
+  updateTestBtn();
 }
+
+/* and the thing that was actually missing: a way to say "I have practised this
+   enough, ask me for it now".
+
+   The schedule will come round to a passage, but not today, and somebody who has
+   just typed one out thirteen times should not have to wait for a date to find
+   out whether they have it. This puts the passage up masked at whatever rung it
+   stands on, off the schedule and out of turn; the switch above it then offers
+   the whole thing if this much is too little. It scores like any other review,
+   because it is one: an early attempt earns less than a timely one, which is
+   exactly what it is worth. */
+function updateTestBtn(){
+  const b = $('btnTestRes');
+  const p = (current && !current.memory && !current.recital) ? findPinFor(current) : null;
+  const can = !!(p && p.starred && memStepList(memSpan(p)).length);
+  b.hidden = !can;
+  if (can) b.title = 'put it up with some of the words hidden, and see how much you have';
+}
+$('btnTestRes').addEventListener('click', ()=>{
+  const p = findPinFor(current);
+  if (p && p.starred) memDealStep(p);
+});
 function updatePinBtn(){
   if (!current) return;
   const p = findPinFor(current);
@@ -2808,12 +3227,1236 @@ $('pinSearch').addEventListener('keydown', e=>{
   if (e.key === 'Escape'){ e.stopPropagation(); closeDrawer(); }
 });
 
+/* ============================== learning by heart ==============================
+   Everything above this line puts the words in front of you while you copy
+   them. Nothing above it ever asks you to produce one. Copying is not recall,
+   and practice that is never spaced is practice that is lost: a passage written
+   a hundred times on a Tuesday is a passage gone by Friday.
+
+   This is the other half of the app. The same typing surface, the same hands,
+   but the text taken away a little at a time, and the passages handed back on
+   the days they are about to slip rather than on the days you happen to sit
+   down. It is four things in order:
+
+     the ladder    how much of the passage is on screen, and how it comes down
+     the schedule  FSRS-4.5, which decides what day a step is wanted back
+     the steps     how a passage is cut up, since a psalm is not a flashcard
+     the deck      what is due, what is new, and what a session is
+
+   A star is what enrols a bookmark. The desk has said a star marks the ones you
+   are committing to memory since long before any of this existed, and it seemed
+   better to keep that promise than to invent a second mark beside it. */
+
+/* ---------- the ladder ----------
+   Three rungs, and every one of them asks you to produce words that are not on
+   the screen: half the passage, then first letters only, then nothing at all.
+
+   There is deliberately no rung that shows the whole text. Copying a passage
+   you can see is not recall, it is transcription, and scoring a clean
+   transcription as a successful retrieval would feed the schedule a
+   measurement of nothing at all: perfect every time, and telling you nothing
+   about what you could produce tomorrow.
+
+   A passage still has to be read before it can be recalled, and it has been:
+   nothing reaches this ladder until it has been written out three times, or
+   bookmarked on purpose. The reading is the rest of the app.
+
+   The first-letter rung is the oldest trick in scripture memory and the reason
+   the ladder is worth having at all. It hands you the shape of the sentence and
+   the count of its words, and makes you find every one of them yourself.
+
+   Which rung a step stands on follows how well it is held rather than how often
+   it has been seen, and a lapse puts it back a rung, so the ladder goes down as
+   readily as up. */
+const STAGES = ['fade', 'initials', 'blind'];
+const STAGE_SAYS = {
+  fade:     'half the words',
+  initials: 'first letters',
+  blind:    'nothing shown',
+};
+/* never more than one rung at a time, however well it went. The step from
+   half a passage to producing it out of nothing is the one people fall off,
+   and it is not made shorter by being taken at a run. */
+function stageAfter(before, it, g){
+  const at = Math.max(0, STAGES.indexOf(before.stage || STAGES[0]));
+  if (g === 1) return STAGES[Math.max(0, at - 1)];
+  let want = 0;
+  if (it.s >= 3) want = 1;
+  if (it.s >= 7) want = 2;
+  return STAGES[Math.min(Math.max(want, at), at + 1)];
+}
+
+/* the mask itself, and the whole reason the rest of this was cheap to build.
+   renderPassage has already laid the passage out one span per character, and
+   placeCaret measures the caret off those spans, so a cue is taken away by
+   hiding the glyph and leaving the box: nothing moves, no line rewraps, and
+   every measurement downstream still holds. Verse numbers are never hidden.
+   They are the scaffolding, not the text. */
+let maskStage = '';
+/* how much of a passage should be showing: the rung its step stands on, or
+   nothing at all if it is being recited */
+function maskFor(p){
+  return !p ? '' : p.recital ? 'blind' : p.memory ? p.memory.stage : '';
+}
+function applyMask(stage){
+  /* a rung this build has never heard of is not a licence to show the whole
+     passage. A store written against an older ladder has steps standing on rungs
+     that no longer exist, and the honest fallback is the lowest rung there is
+     rather than no mask at all */
+  maskStage = !stage ? '' : (STAGE_SAYS[stage] ? stage : STAGES[0]);
+  /* every character is set to the state it should be in, and one already in that
+     state is left alone. This used to clear every mask and then rebuild it, which
+     opened a window, however brief, in which the passage stood legible; a browser
+     that resolved style inside that window animated the whole text from visible
+     to hidden, and switching passages flashed the words you were about to be
+     asked to remember. There is now no such window to resolve style inside. */
+  els.text.querySelectorAll('.word').forEach((w, i) => {
+    const cs = [];
+    w.querySelectorAll('.ch').forEach(s => { if (s.textContent !== ' ') cs.push(s); });
+    if (!cs.length) return;
+    /* fade keeps every other word whole, beginning with the first, so there is
+       always somewhere to push off from */
+    const keep = !maskStage ? cs.length
+               : maskStage === 'fade' ? (i % 2 ? 0 : cs.length)
+               : maskStage === 'initials' ? 1 : 0;
+    cs.forEach((s, j) => s.classList.toggle('hid', j >= keep));
+  });
+}
+/* one word handed back. It costs the grade, which is exactly the point: a hint
+   that is free is a hint that will be taken every time, and a passage recalled
+   with hints has not been recalled. */
+function peekWord(){
+  if (!maskStage || finished || !chars.length) return;
+  /* the caret resting on the space after a word sits inside that word's own
+     span, so a peek taken there would hand back the word just written. Step
+     over any spaces first: what is wanted is always the word coming up. */
+  let at = Math.min(idx, chars.length - 1);
+  while (at < chars.length - 1 && chars[at].c === ' ') at++;
+  const w = chars[at].el.parentNode;
+  const hid = w.querySelectorAll('.ch.hid');
+  if (!hid.length) return;
+  hid.forEach(s => s.classList.remove('hid'));
+  peeks++;
+  flashNote('A word given back. It counts, and this one will come round again.');
+}
+
+/* ---------- the schedule ----------
+   FSRS-4.5, with the published default weights and no optimiser.
+
+   Two numbers are carried per step. Stability is how many days the passage
+   would take to fall to a nine-in-ten chance of coming back, and difficulty is
+   how hard this particular step is to shift, on a scale of one to ten.
+   Retrievability, the chance you would get it right today, falls away along the
+   curve below as the days pass, and the next date is simply the day that chance
+   reaches whatever you have said you are aiming for.
+
+   SuperMemo and Anki fit those weights to one reader's own history, with
+   thousands of reviews behind them. There is nothing like that here and there
+   never will be, so the published defaults stand. They are a far better guess
+   than any fixed ladder of intervals, which is what the alternative amounts to.
+
+   Note the sign of the decay. R is a power curve and not an exponential, which
+   is the correction that made 4.5 fit real forgetting: steep before stability
+   is reached, long and flat after it. */
+const FSRS_W = [0.4872, 1.4003, 3.7145, 13.8206, 5.1618, 1.2298, 0.8975, 0.031,
+                1.6474, 0.1367, 1.0461, 2.1072, 0.0793, 0.3246, 1.587, 0.2272, 2.8755];
+const FSRS_F = 19 / 81, FSRS_DECAY = -0.5;
+const memD = d => Math.min(10, Math.max(1, d));
+const memS = s => Math.min(36500, Math.max(0.01, s));
+/* the chance of recall t days after a step held this stably was last seen */
+const memR = (t, s) => Math.pow(1 + FSRS_F * Math.max(0, t) / s, FSRS_DECAY);
+/* and its inverse: the days until that chance has fallen to r */
+const memDays = (r, s) => s / FSRS_F * (Math.pow(r, 1 / FSRS_DECAY) - 1);
+
+/* the four answers, in the order the algorithm numbers them */
+const GRADES = [
+  {g: 1, name: 'again'},
+  {g: 2, name: 'hard'},
+  {g: 3, name: 'good'},
+  {g: 4, name: 'easy'},
+];
+
+/* today as a plain count of local days, so arithmetic on due dates is
+   arithmetic and never a clock. Built through Date.UTC from the local calendar
+   date, which is the one way to get a day number that doesn't shift under
+   daylight saving. */
+function dayNo(d){
+  d = d || new Date();
+  return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5);
+}
+/* intervals are nudged a few per cent either way, so that a heavy day's worth
+   of steps, all first seen together, doesn't stay one heavy day for ever */
+function memFuzz(n){
+  if (n < 3) return n;
+  const w = Math.max(1, Math.round(n * 0.05));
+  return Math.max(1, n + Math.floor(Math.random() * (2 * w + 1)) - w);
+}
+/* a step nobody has met yet */
+function memBlank(){ return {d: 0, s: 0, due: 0, last: null, reps: 0, lapses: 0, g: 0, stage: STAGES[0]}; }
+
+/* the whole of the algorithm, in one function. `it` is changed in place, so a
+   caller that only wants to know what an answer would cost hands it a copy. */
+function memSchedule(it, g, today){
+  if (!it.reps){
+    it.d = memD(FSRS_W[4] - (g - 3) * FSRS_W[5]);
+    it.s = memS(FSRS_W[g - 1]);
+  } else {
+    const t = Math.max(0, today - (it.last == null ? today : it.last));
+    const r = memR(t, it.s), d = it.d, s = it.s;
+    /* difficulty drifts back towards the middle as well as moving with the
+       answer, or a long run of good days would drive it to one and leave every
+       later interval stuck at the ceiling */
+    it.d = memD(FSRS_W[7] * FSRS_W[4] + (1 - FSRS_W[7]) * (d - FSRS_W[6] * (g - 3)));
+    it.s = g === 1
+      /* a lapse is capped at the stability the step already had. 4.5 leaves it
+         uncapped, and on something forgotten while it was still new that lets
+         forgetting hand back a longer gap than remembering would have done */
+      ? memS(Math.min(s, FSRS_W[11] * Math.pow(d, -FSRS_W[12]) *
+                         (Math.pow(s + 1, FSRS_W[13]) - 1) * Math.exp(FSRS_W[14] * (1 - r))))
+      : memS(s * (1 + Math.exp(FSRS_W[8]) * (11 - d) * Math.pow(s, -FSRS_W[9]) *
+                      (Math.exp(FSRS_W[10] * (1 - r)) - 1) *
+                      (g === 2 ? FSRS_W[15] : 1) * (g === 4 ? FSRS_W[16] : 1)));
+  }
+  it.reps++;
+  if (g === 1) it.lapses++;
+  it.last = today;
+  it.due = today + memFuzz(Math.max(1, Math.round(memDays(store.settings.memAim, it.s))));
+  return it;
+}
+/* what an answer would buy, for the label under its button */
+function memPreview(it, g){
+  const t = dayNo();
+  return memSchedule(Object.assign({}, it), g, t).due - t;
+}
+/* a date said the way anyone would say it. Rounding to months and years makes
+   a long interval readable, but only if it is also grammatical: "in 1 months"
+   on the easy button is the sort of thing that makes a reader stop trusting
+   the rest of the screen */
+function memWhen(days){
+  if (days <= 1) return 'tomorrow';
+  if (days < 31) return 'in ' + days + ' days';
+  if (days < 330){
+    const m = Math.round(days / 30);
+    return m <= 1 ? 'in a month' : 'in ' + m + ' months';
+  }
+  const y = Math.round(days / 365);
+  return y <= 1 ? 'in a year' : 'in ' + y + ' years';
+}
+
+/* ---------- the steps ----------
+   A passage is not a flashcard. Psalm 23 learnt as six separate verses is six
+   things you know and not one thing you can say, and the joins between them are
+   exactly where a recitation stops dead. So the steps grow instead: the first
+   is a couple of verses, the next is those and the two after, and the last of
+   them is the passage entire.
+
+   Growing for ever would end in a step nobody could sit through, so once a step
+   would run past what one sitting holds, the window slides forward rather than
+   stretching. Short passages, which is nearly everything that gets starred,
+   stay cumulative all the way to the whole. A long chapter becomes an
+   overlapping walk through itself, and the overlap is what stitches the joins.
+
+   The cut is made on the count of verses alone and never on the words, because
+   the words differ between translations and a step has to mean the same thing
+   in the ESV as it does in the KJV. */
+const MEM_SEG = 2;          /* verses each turn adds to the one before it */
+const MEM_WINDOW = 8;       /* verses one turn may cover */
+/* verses for scripture, sentences for text the reader brought in themselves.
+   Nothing on screen ever names a unit this app invented: it says how much of the
+   passage is being asked for, in the units the passage is actually made of. */
+const memUnit = pin => (pin && pin.translation === 'custom') ? 'sentence' : 'verse';
+
+function memStepList(n){
+  const out = [];
+  if (!(n > 0)) return out;
+  for (let b = Math.min(MEM_SEG, n) - 1; ; b = Math.min(b + MEM_SEG, n - 1)){
+    out.push({a: Math.max(0, b - MEM_WINDOW + 1), b: b});
+    if (b >= n - 1) break;
+  }
+  return out;
+}
+/* text of your own has no verses, so its sentences stand in for them */
+function memSentences(t){
+  const out = String(t || '').replace(/\s+/g, ' ').trim().match(/[^.!?;:]+[.!?;:]*/g) || [];
+  return out.map(s => s.trim()).filter(Boolean);
+}
+/* how many verses a bookmark covers, worked out from the canon rather than from
+   any fetched text, so the desk can show a passage's shape before a word of it
+   has been asked for. Counted the same way scribe counts chapters, and for the
+   same reason: it has to be true before the network is */
+function memSpan(pin){
+  if (!pin) return 0;
+  if (pin.translation === 'custom') return memSentences(pin.text || '').length;
+  const r = readRef(pin.ref).ref;
+  if (!r) return 0;
+  const last = r.endChapter || r.chapter;
+  if (r.verse == null){
+    let t = 0;
+    for (let c = r.chapter; c <= last; c++) t += chVerses(r.bi, c);
+    return t;
+  }
+  if (last === r.chapter)
+    return Math.max(1, Math.min(r.endVerse || r.verse, chVerses(r.bi, r.chapter)) - r.verse + 1);
+  let t = Math.max(0, chVerses(r.bi, r.chapter) - r.verse + 1);
+  for (let c = r.chapter + 1; c < last; c++) t += chVerses(r.bi, c);
+  return t + Math.min(r.endVerse || chVerses(r.bi, last), chVerses(r.bi, last));
+}
+/* the reference of a slice, named exactly when it can be. A bookmark running
+   across two chapters has verse numbers that start over in the middle, so
+   naming one of its steps by number would be a reference to somewhere else;
+   those keep the bookmark's own name and let the line above say which step it
+   is. */
+function memStepRef(pin, verses){
+  const r = readRef(pin.ref).ref;
+  const a = verses[0], b = verses[verses.length - 1];
+  if (!r || !a || (r.endChapter && r.endChapter !== r.chapter)) return pin.ref;
+  return proseRef({bi: r.bi, chapter: r.chapter, verse: a.verse,
+                   endChapter: r.chapter, endVerse: b.verse !== a.verse ? b.verse : null});
+}
+
+/* ---------- the deck ----------
+   Which steps exist, which are wanted back today, and what happens over the
+   course of a session. */
+function memStarred(){ return store.pins.filter(p => p.starred); }
+function memKey(pin, k){ return pinKey(pin) + '@' + k; }
+
+/* the day's own counters, which roll over when the day does. Kept by local
+   date rather than by a timestamp, exactly as the tally is */
+function memRoll(){
+  const d = localDay();
+  if (store.memory.day !== d){ store.memory.day = d; store.memory.fresh = 0; save(); }
+}
+
+/* everything one bookmark has under way, in step order */
+function memTrack(pin){
+  const steps = memStepList(memSpan(pin));
+  const items = steps.map((s, k) => store.memory.items[memKey(pin, k)] || null);
+  let front = -1;
+  for (let k = 0; k < items.length; k++) if (items[k]) front = k;
+  return {pin, steps, items, front};
+}
+/* a step stops being dealt on its own once the step after it has been recalled
+   properly, because the later one contains it whole and reviewing both is
+   writing the same words out twice in a morning. Its record is kept; it is only
+   no longer asked for. */
+function memLive(tr, k){
+  const next = tr.items[k + 1];
+  return !(next && next.g >= 3);
+}
+function memDueList(){
+  const t = dayNo(), out = [];
+  for (const pin of memStarred()){
+    const tr = memTrack(pin);
+    tr.items.forEach((it, k) => {
+      if (it && memLive(tr, k) && it.due <= t) out.push({pin, k, n: tr.steps.length});
+    });
+  }
+  return out;
+}
+/* the next step a bookmark is ready to take up. One is only introduced once the
+   one before it stands on its own feet, or the deck fills with beginnings and
+   nothing is ever carried to the end. */
+function memNewList(){
+  const out = [];
+  for (const pin of memStarred()){
+    const tr = memTrack(pin);
+    if (!tr.steps.length) continue;
+    if (tr.front < 0){ out.push({pin, k: 0, n: tr.steps.length}); continue; }
+    const f = tr.items[tr.front];
+    if (tr.front + 1 < tr.steps.length && f.reps && f.s >= 2)
+      out.push({pin, k: tr.front + 1, n: tr.steps.length});
+  }
+  return out;
+}
+
+/* the session. `memQueue` is what is left to carry, `memScored` remembers which
+   steps have already been measured today, and `memPending` holds the run whose
+   answer is still on screen and can still be overruled. None of it is saved:
+   a session is a sitting, not a record. */
+let memQueue = [], memScored = {}, memPending = null;
+
+function memShuffle(a){
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+const memSlip = x => ({key: memKey(x.pin, x.k), ref: pinKey(x.pin), k: x.k, n: x.n});
+/* everything due, shuffled so the same passages don't arrive in the same order
+   every morning, and then as many new steps as the day's allowance still holds */
+function memFill(){
+  memRoll();
+  const room = Math.max(0, (store.settings.memNew | 0) - (store.memory.fresh | 0));
+  return memShuffle(memDueList()).concat(memNewList().slice(0, room)).map(memSlip);
+}
+function memCount(){
+  memRoll();
+  const room = Math.max(0, (store.settings.memNew | 0) - (store.memory.fresh | 0));
+  return memDueList().length + Math.min(room, memNewList().length);
+}
+/* what the chip and the line above the passage both count: steps still to
+   carry, not counting the one in hand. While a sitting is under way the queue
+   is the truth; between sittings the deck is, and then the step on screen has
+   to be taken back off, because until it is scored the deck still calls it due */
+function memLeft(){
+  if (memQueue.length) return memQueue.length;
+  const inHand = current && current.memory && !memScored[current.memory.key] ? 1 : 0;
+  return Math.max(0, memCount() - inHand);
+}
+
+
+/* the next step, dealt. Taken off the queue as it goes out: a step abandoned
+   mid-passage is simply not reviewed today, and its due date, which has not
+   moved, brings it back tomorrow. */
+/* one step of one bookmark, fetched and cut. Both ways of putting a passage on
+   screen come through here: the one the schedule deals, and the one the reader
+   asks for by hand. */
+async function memBuild(pin, k, onFail){
+  const tr = memTrack(pin);
+  const step = tr.steps[k];
+  if (!step) return null;
+  const it = tr.items[k] || memBlank();
+  let p;
+  if (pin.translation === 'custom'){
+    const said = memSentences(pin.text || '').slice(step.a, step.b + 1).join(' ');
+    if (!said) return null;
+    p = customPassage(said, pin.ref === 'Your own text' ? '' : pin.ref, said);
+  } else {
+    let whole;
+    try {
+      whole = await fetchPassage(pin.ref, pinTranslation(pin));
+    } catch(err){
+      if (onFail) onFail();
+      throw err;
+    }
+    const vs = (whole.verses || []).slice(step.a, step.b + 1);
+    if (!vs.length) return null;
+    p = Object.assign({}, whole, {verses: vs, reference: memStepRef(pin, vs)});
+  }
+  p.memory = {key: memKey(pin, k), ref: pinKey(pin), k: k, n: tr.steps.length,
+              upto: step.b + 1, whole: memSpan(pin), unit: memUnit(pin),
+              stage: it.stage || STAGES[0]};
+  return p;
+}
+
+async function memPassage(){
+  memQueue = memQueue.filter(q => store.pins.some(p => pinKey(p) === q.ref && p.starred));
+  if (!memQueue.length) memQueue = memFill();
+  const q = memQueue.shift();
+  if (!q) return null;
+  const pin = store.pins.find(p => pinKey(p) === q.ref);
+  if (!pin) return null;
+  /* a step already taken off the queue and then lost to an unreachable publisher
+     would be a step silently skipped for the day, so it goes back at the front */
+  return memBuild(pin, q.k, () => memQueue.unshift(q));
+}
+
+/* the step the schedule would deal for one particular bookmark, put back on
+   screen. This is the other half of the switch above the passage: it is how a
+   reader who tried the whole thing and found it too much gets back to the piece
+   they were actually asked for, without waiting for tomorrow. */
+async function memDealStep(pin){
+  const tr = memTrack(pin);
+  if (!tr.steps.length) return;
+  let k = -1;
+  for (let i = 0; i < tr.steps.length; i++) if (tr.items[i] && memLive(tr, i)) k = i;
+  if (k < 0) k = Math.max(0, tr.front);
+  const seq = ++loadSeq;
+  showLoading();
+  try {
+    const p = await memBuild(pin, k);
+    if (!p || seq !== loadSeq) return;
+    memInto();
+    renderPassage(p);
+  } catch(err){
+    if (seq === loadSeq) handleLoadError(err, pinTranslation(pin));
+  }
+}
+
+/* ---------- the score ----------
+   Anki asks the reader how it went, and it is right to, because clicking
+   "reveal" tells it nothing. Here the typing has already said: a passage
+   produced out of nothing at speed with no peeking is not the same event as one
+   dragged out of three hints and a dozen corrections, and the difference is
+   sitting in figures the run already counts.
+
+   Easy is tied to the rung rather than to speed. Quick fingers on a passage
+   with half its words still on screen is a fact about typing; the same passage
+   produced with nothing on screen is a fact about memory, and memory is what
+   the schedule is trying to model. The reader can still say otherwise. */
+/* the run's accuracy as it actually was. The board rounds to whole per cent,
+   and a schedule set from a rounded number would put a run of 96.5 in the same
+   band as one of 97.4, so nothing below reads the board */
+function runAcc(){ return keystrokes ? 100 * (keystrokes - errors) / keystrokes : 100; }
+function memGrade(stage){
+  const acc = runAcc();
+  if (peeks || acc < 90) return 1;
+  if (acc < 97 || rubouts) return 2;
+  /* easy has to mean flawless. A single slip in three hundred characters is a
+     finger and not a memory, and it still belongs in the band below */
+  return (stage === 'blind' && !errors) ? 4 : 3;
+}
+
+/* called from finish(), for a memorised step and nothing else.
+
+   The first attempt at a step in a session is the one that is scored, and every
+   attempt after it in the same session is relearning. That division is the
+   whole of successive relearning, and it is not a detail: a step failed and
+   then drilled four times is a step you had forgotten, and letting the fourth
+   attempt set the schedule would say the opposite. FSRS-4.5 has no model of
+   same-day review either, so there is nothing honest to hand it. */
+function memReport(){
+  if (current && current.recital){ memReportRecital(); return; }
+  const m = current && current.memory;
+  $('grades').hidden = !m;
+  $('gradesHead').textContent = 'How did that go?';
+  if (!m){ memPending = null; return; }
+  /* the bookmark was deleted while its step was on screen: there is nothing
+     left to schedule, and an answer left pending would be written against it */
+  if (!store.pins.some(p => pinKey(p) === m.ref)){
+    $('grades').hidden = true; memPending = null; return;
+  }
+
+  if (memScored[m.key]){
+    const clean = runAcc() >= 97 && !peeks;
+    memQueue = memQueue.filter(q => q.key !== m.key);
+    if (!clean) memQueue.push({key: m.key, ref: m.ref, k: m.k, n: m.n});
+    memPending = null;
+    /* the first attempt at a step took the scoring with it, so there is nothing
+       here to ask and nothing for the reader to answer. Emptying the buttons and
+       leaving the heading standing put a question on screen that could not be
+       answered and had not been asked of anybody: the whole block goes instead.
+       What it used to explain is on screen anyway, in the count on the chip,
+       which drops when a step is finished for the day and does not when it is
+       still owed. */
+    $('grades').hidden = true;
+    $('gradeRow').innerHTML = ''; $('gradeNote').innerHTML = '';
+    renderMemLine(); syncBar();
+    return;
+  }
+  memScored[m.key] = true;
+  const before = Object.assign(memBlank(), store.memory.items[m.key]);
+  memPending = {m, before, fresh: !before.reps, counted: false};
+  memApply(memGrade(m.stage));
+}
+
+/* the answer written down, and rewritable. Every button works from the step as
+   it stood before the run, so pressing a second one corrects the first rather
+   than scheduling on top of it. */
+function memApply(g){
+  if (!memPending) return;
+  const m = memPending.m, before = memPending.before;
+  const it = memSchedule(Object.assign({}, before), g, dayNo());
+  it.g = g;
+  it.stage = stageAfter(before, it, g);
+  store.memory.items[m.key] = it;
+  if (memPending.fresh && !memPending.counted){
+    memPending.counted = true;
+    memRoll();
+    store.memory.fresh = (store.memory.fresh | 0) + 1;
+  }
+  /* a step that was gone comes round again before the sitting ends; one clean
+     pass is what closes it */
+  memQueue = memQueue.filter(q => q.key !== m.key);
+  if (g === 1) memQueue.push({key: m.key, ref: m.ref, k: m.k, n: m.n});
+  memPrune();
+  save();
+  renderGradeRow(g);
+  renderMemLine();
+  syncBar();
+}
+
+function renderGradeRow(g){
+  if (!memPending) return;
+  const before = memPending.before;
+  $('gradeRow').innerHTML = GRADES.map(x =>
+    '<button class="gbtn' + (x.g === g ? ' on' : '') + '" data-g="' + x.g +
+    '" aria-pressed="' + (x.g === g ? 'true' : 'false') + '">' + x.name +
+    '<span class="gi">' + memWhen(memPreview(before, x.g)) + '</span></button>').join('');
+  const it = store.memory.items[memPending.m.key];
+  const was = STAGES.indexOf(memPending.m.stage), now = STAGES.indexOf(it.stage);
+  $('gradeNote').innerHTML =
+    'Scored <b>' + GRADES[g - 1].name + '</b> from how you typed it. Change that with ' +
+    '<b>1</b> to <b>4</b>, or by pressing one above. Due again <b>' +
+    memWhen(it.due - dayNo()) + '</b>, with <b>' + STAGE_SAYS[it.stage] + '</b> on screen' +
+    (now > was ? ', which is less help than you had this time.'
+     : now < was ? ', which is more help than you had this time.' : '.');
+}
+$('gradeRow').addEventListener('click', e => {
+  const b = e.target.closest('.gbtn');
+  if (b) memApply(+b.dataset.g);
+});
+
+/* the line above the passage: how far through the steps this bookmark has come,
+   how much of the text is showing, and how much of the sitting is left */
+function renderMemLine(){
+  const m = current && current.memory, r = current && current.recital;
+  syncMemChip();        /* dealing a step has just taken one off the count */
+  $('memLine').hidden = !m && !r;
+  if (!m && !r) return;
+  const n = (r || m).n;
+  /* the rail measures how far through a passage's steps you have come, so a
+     passage that is only one step has nothing for it to measure: it would stand
+     full to the brim on every single run and mean nothing by it. Most of what
+     gets starred is two or three verses, so this is the common case. */
+  const say = t => { $('mprogText').textContent = t; $('mprogText').hidden = !t; };
+  $('mprogRail').hidden = !(n > 1);
+  /* the switch shows on everything the desk can deal, and it has been narrowed
+     twice on bad reasoning. It is not a switch between two amounts of text, and
+     it is not a switch between two amounts of help: those are what the two sides
+     look like, and on a one-verse passage standing at "nothing shown" they look
+     identical. It is a switch between two records. A step is scored by the
+     reader and given a date; a recital is scored by whether it stood, credits
+     the whole passage, and is written into the list of passages typed from
+     memory. A reader on the last rung of a short passage is exactly the reader
+     most likely to want the second of those, and hiding the switch there was
+     taking the choice away at the moment it had most to offer. */
+  const pin = memCurrentPin();
+  $('mSwap').hidden = !pin;
+  $('mSwapStep').setAttribute('aria-pressed', r ? 'false' : 'true');
+  $('mSwapAll').setAttribute('aria-pressed', r ? 'true' : 'false');
+  const left = memLeft();
+  $('mDueText').textContent = left ? left + ' more today' : 'last one today';
+  /* how much of the passage is being asked for, counted in the verses it is made
+     of rather than in some unit of this app's own devising. "4 of 6 verses" needs
+     no explaining; the rail beside it fills as the passage is taken on. */
+  const whole = (r || m).whole || 1, unit = (r || m).unit || 'verse';
+  if (r){
+    $('mprogFill').style.width = '100%';
+    say(n > 1 ? 'all ' + tally(whole, unit) : '');
+    $('mStage').textContent = STAGE_SAYS.blind;
+    return;
+  }
+  const it = store.memory.items[m.key] || memBlank();
+  $('mprogFill').style.width =
+    Math.round(100 * Math.min(m.upto || whole, whole) / whole) + '%';
+  say(n > 1 ? (m.upto || whole) + ' of ' + tally(whole, unit) : '');
+  /* mid-run it says what is on screen; once the run is scored it says what will
+     be on screen next time, which is the thing worth knowing then */
+  $('mStage').textContent = STAGE_SAYS[(finished ? it.stage : m.stage)] || STAGE_SAYS[STAGES[0]];
+}
+
+/* the bookmark the passage on screen belongs to, whichever of the two sizes it
+   is being attempted at */
+function memCurrentPin(){
+  const p = current;
+  const key = !p ? '' : p.recital ? p.recital.key : p.memory ? p.memory.ref : '';
+  return key ? store.pins.find(x => pinKey(x) === key) || null : null;
+}
+$('mSwapAll').addEventListener('click', ()=>{
+  const pin = memCurrentPin();
+  if (pin && !(current && current.recital)) memRecite(pin);
+});
+$('mSwapStep').addEventListener('click', ()=>{
+  const pin = memCurrentPin();
+  if (pin && current && current.recital) memDealStep(pin);
+});
+
+/* the ladder once had a rung that showed the whole passage, and a store written
+   while it did has steps still standing on it. That rung is gone, so those steps
+   came up with every word on screen and the line above them named a rung it
+   could not spell. Anything the ladder no longer recognises is stood on its
+   lowest rung, which is where a step whose cue level is unknown belongs. */
+function memHeal(){
+  let moved = 0;
+  for (const k of Object.keys(store.memory.items)){
+    const it = store.memory.items[k];
+    if (it && STAGES.indexOf(it.stage) < 0){ it.stage = STAGES[0]; moved++; }
+  }
+  if (moved) save();
+}
+
+/* items belonging to bookmarks that no longer exist. Unstarring is deliberately
+   not enough to lose the record: someone who sets a psalm down for a month and
+   takes it up again should find their place, not start it over. */
+function memPrune(){
+  const live = new Set(store.pins.map(pinKey));
+  for (const k of Object.keys(store.memory.items))
+    if (!live.has(k.slice(0, k.lastIndexOf('@')))) delete store.memory.items[k];
+  const said = memSaidAll();
+  for (const k of Object.keys(said)) if (!live.has(k)) delete said[k];
+}
+
+/* ---------- the recital ----------
+   Everything above this is work the app hands out: a step, at the rung the
+   schedule thinks you are standing on, whether or not you are standing higher.
+   A reader who knows the whole psalm and is being asked for two verses with
+   half their words showing has no way to say so, and no way to be believed.
+
+   This is that way. A recital is the whole passage, every verse of it, with
+   nothing at all on the screen, and it is asked for rather than dealt. It is
+   not owed, it does not come out of the day's work, and it can be taken on any
+   passage at all, including one the app has never mentioned.
+
+   The one rule that makes it safe to attempt: reaching above the rung you were
+   set can only ever help you. A recital that does not stand changes nothing.
+   No lapse, no date moved, no cue put back. Punishing a reader for trying the
+   harder thing would teach them not to try it, and the harder thing is the
+   whole point of the feature. */
+
+/* the claim stands if nothing was given back and the passage is exact at the
+   end of it. A slipped finger caught and corrected is not a hole in what
+   somebody knows, and a recital is a claim about words rather than keystrokes;
+   a peeked word is a different matter, because then the word was not yours. */
+function recitalStood(){
+  return chars.length > 0 && !peeks && correctChars === chars.length;
+}
+
+/* the whole passage, nothing shown. The bookmark may be one that does not exist
+   yet: a passage recited out of nowhere is saved only if the recital stands,
+   so a failed attempt at something you turned out not to know leaves no trace
+   of itself in the bookmarks. */
+async function memRecite(pin){
+  /* a passage that cannot be placed in the canon has no steps to credit, and a
+     recital of it would have nothing to be a recital of */
+  const steps = memStepList(memSpan(pin)).length;
+  if (!steps) return;
+  const seq = ++loadSeq;
+  closeDrawer();
+  showLoading();
+  try {
+    let p;
+    if (pin.translation === 'custom'){
+      const text = pin.text || '';
+      if (!text) return;
+      p = customPassage(text, pin.ref === 'Your own text' ? '' : pin.ref, pin.raw || text);
+    } else {
+      p = await fetchPassage(pin.ref, pinTranslation(pin));
+    }
+    if (seq !== loadSeq) return;
+    p.recital = {pin: pin, key: pinKey(pin), n: memStepList(memSpan(pin)).length,
+                 whole: memSpan(pin), unit: memUnit(pin)};
+    memInto();
+    renderPassage(p);
+  } catch(err){
+    if (seq === loadSeq) handleLoadError(err, pinTranslation(pin));
+  }
+}
+
+/* a recital that stood, written into the steps underneath it.
+
+   The subject of a recital is the whole passage, which is the last step and no
+   other, so that one goes through the schedule like any other success. The
+   steps below it are pieces of the thing just said whole: there is nothing left
+   in them to test, so they are marked carried and retire, rather than being
+   given schedule dates of their own that would ask for parts of a passage whose
+   whole has already been produced. */
+function memCreditWhole(pin){
+  const steps = memStepList(memSpan(pin));
+  if (!steps.length) return;
+  const last = steps.length - 1;
+  for (let k = 0; k < last; k++){
+    const key = memKey(pin, k);
+    const it = Object.assign(memBlank(), store.memory.items[key]);
+    it.g = 4; it.stage = 'blind'; it.reps = it.reps || 1;
+    store.memory.items[key] = it;
+  }
+  const key = memKey(pin, last);
+  const it = memSchedule(Object.assign(memBlank(), store.memory.items[key]), 4, dayNo());
+  it.g = 4; it.stage = 'blind';
+  store.memory.items[key] = it;
+}
+
+/* said whole, and when. The record is the point of the exercise: it is the one
+   thing in the store that says a passage was produced entire, out of nothing,
+   on a day that can be named */
+/* the record of recitals, made if it is somehow missing. A store written by an
+   older build, or edited by hand, should cost a reader their schedule at worst
+   and never a broken screen */
+function memSaidAll(){
+  if (!store.memory.said || typeof store.memory.said !== 'object') store.memory.said = {};
+  return store.memory.said;
+}
+function memSaid(key){ return memSaidAll()[key] || null; }
+function memSaidWhen(rec){
+  if (!rec) return '';
+  const d = dayNo() - rec.at;
+  return d <= 0 ? 'today' : d === 1 ? 'yesterday'
+       : d < 31 ? d + ' days ago'
+       : d < 330 ? (Math.round(d/30) <= 1 ? 'a month ago' : Math.round(d/30) + ' months ago')
+       : (Math.round(d/365) <= 1 ? 'a year ago' : Math.round(d/365) + ' years ago');
+}
+
+function memReportRecital(){
+  const r = current.recital;
+  const stood = recitalStood();
+  /* a step is graded by the reader, so its heading asks. A recital is not: there
+     was nothing on screen, so the app knows exactly as much about how it went as
+     the reader does, and recitalStood has already said. Asking "how did that go"
+     over an empty row put a question to the reader that they had no way to
+     answer and that the line underneath had already answered for them. Each
+     ending says what it was instead, and the note below it stops repeating the
+     heading back. */
+  $('gradeRow').innerHTML = '';
+  $('grades').hidden = false;
+  memPending = null;
+
+  if (!stood){
+    /* and nothing else happens at all. Trying more than you were asked for has to
+       be free, or nobody sensible would try it */
+    const wrong = chars.length - correctChars;
+    $('gradesHead').textContent = 'Not this time';
+    $('gradeNote').innerHTML =
+      (peeks
+        ? 'You revealed ' + tally(peeks, 'word') + ', so not every word came from you.'
+        : tally(wrong, 'character') + ' still wrong at the end.') +
+      ' Nothing has changed: no date has moved and no help has been added back. ' +
+      'Trying more than you were asked for never costs you anything.';
+    renderMemLine(); syncBar();
+    return;
+  }
+
+  /* the bookmark is made real only now, if it was not already */
+  let pin = store.pins.find(x => pinKey(x) === r.key);
+  if (!pin){ pin = r.pin; store.pins.push(pin); }
+  const fresh = !pin.starred;
+  pin.starred = true;
+
+  const rec = memSaid(r.key);
+  const again = rec && rec.at === dayNo();
+  if (!again){
+    memCreditWhole(pin);
+    memSaidAll()[r.key] = {at: dayNo(), n: ((rec && rec.n) || 0) + 1};
+  }
+  memQueue = memQueue.filter(q => q.ref !== r.key);
+  memPrune(); save();
+  updatePinBtn(); updatePinResBtn(); updateStarBtn(); renderPins();
+
+  const said = memSaid(r.key);
+  const it = store.memory.items[memKey(pin, r.n - 1)];
+  $('gradesHead').textContent = again ? 'Said again today' : 'Said from memory';
+  $('gradeNote').innerHTML = again
+    ? 'You already typed this one from memory today, and that attempt set the ' +
+      'date it comes back.'
+    : '<b>' + escapeHtml(current.reference) + '</b>, every ' + (r.unit || 'verse') +
+      ' of it. ' +
+      (r.n > 1 ? 'You typed all of it, so the whole passage counts as reviewed and you ' +
+                 'will not be asked for part of it again. ' : '') +
+      'Due again <b>' + memWhen(it.due - dayNo()) + '</b>.' +
+      (fresh ? ' It is now bookmarked, and it starts out as something you already know.' : '') +
+      (said.n > 1 ? ' You have now typed it from memory <b>' + tally(said.n, 'time') +
+                    '</b>.' : '');
+  renderMemLine(); syncBar();
+}
+
+/* ---------- the round ----------
+   The schedule only ever asks for what is about to slip. That is exactly right
+   for keeping a passage and exactly wrong for the morning somebody wants to go
+   through everything they know, start to finish, for its own sake. Nothing above
+   this offers that: carry the day's work and the app says there is nothing due,
+   which is true and unhelpful.
+
+   A round is the other thing. Every passage you have been all the way through,
+   whole, with nothing on the screen, in the order they come in the Bible. It is
+   never owed, it never counts against tomorrow, and it can be taken as often as
+   you like. Anything carried clean counts exactly as it would on any other day;
+   anything that does not costs nothing, which is the bargain every attempt above
+   the line gets here. */
+let memRound = [];
+
+/* Genesis to Revelation, with text of your own after it. A round through the
+   psalms ought to come out in the order the psalms are in, and a round that
+   wandered would feel like a shuffle rather than a walk. */
+function memCanonOrder(pins){
+  const at = pin => {
+    const r = pin.translation === 'custom' ? null : readRef(pin.ref).ref;
+    return r ? [0, r.bi, r.chapter, r.verse || 0] : [1, 0, 0, 0];
+  };
+  return pins.slice().sort((a, b) => {
+    const x = at(a), y = at(b);
+    for (let i = 0; i < 4; i++) if (x[i] !== y[i]) return x[i] - y[i];
+    return String(a.ref).localeCompare(String(b.ref));
+  });
+}
+
+/* what a round can ask for: enrolled, and with none of it still unseen. A round
+   that opened with verses the reader has never once been shown would be a round
+   built to fail, and the point of it is the opposite */
+function memRoundable(bundle){
+  const out = [];
+  for (const pin of memStarred()){
+    if (bundle != null && !sameBundle(pin, bundle)) continue;
+    const tr = memTrack(pin);
+    if (tr.steps.length && tr.front >= tr.steps.length - 1) out.push(pin);
+  }
+  return memCanonOrder(out);
+}
+
+/* which shelf a round walks: everything you have by heart, or one bundle of it.
+   A shelf with nothing roundable on it falls back to everything, the same way
+   the bookmark pool does, rather than leaving the button with nothing to deal;
+   the name that comes back is the one actually used, so nothing on screen ever
+   claims to be walking the psalms while walking the lot. */
+function roundPool(){
+  const from = store.settings.roundFrom || 'all';
+  if (from.indexOf('bundle:') === 0){
+    const name = from.slice(7), got = memRoundable(name);
+    if (got.length) return {pins: got, shelf: name};
+  }
+  return {pins: memRoundable(), shelf: ''};
+}
+
+function memRunAll(){
+  memRound = roundPool().pins.map(pinKey);
+  memNextInRound();
+}
+/* the next passage in the round, dealt whole. Taken off the list as it goes out,
+   so a round walks forward and finishes rather than circling */
+function memNextInRound(){
+  let pin = null;
+  while (memRound.length && !pin){
+    const key = memRound.shift();
+    pin = store.pins.find(p => pinKey(p) === key && p.starred) || null;
+  }
+  if (!pin){ memRound = []; return false; }
+  memRecite(pin);
+  return true;
+}
+
+/* ---------- the offer ----------
+   Learning by heart is not a mode anyone selects. There is no button for it in
+   the bar and there never was meant to be: a reader who has to go and choose
+   "memorise" before anything happens is a reader who has already decided, and
+   those are not the ones the feature is for.
+
+   So the app watches instead, and speaks twice. It offers to take a passage up
+   when the reader has shown, by writing it out again and again or by
+   bookmarking it, that they keep coming back to it. And it says when steps are
+   due, wherever the reader happens to be.
+
+   Both go on the results screen, under the run just finished. Never mid-passage
+   and never on the way in: a screen you reached by completing something is the
+   one place an offer is not an interruption. */
+const MEM_OFFER_AT = 3;          /* writings before a loose passage is offered */
+const MEM_MODES = ['daily', 'random', 'passage', 'pinned', 'scribe', 'custom'];
+
+/* the bookmark a passage would become, for weighing an offer before anything is
+   actually saved */
+function memPinFor(p){
+  return p.custom
+    ? {ref: p.reference, translation: 'custom', text: p.custom.text, raw: p.custom.raw}
+    : {ref: p.reference, translation: null};
+}
+/* whether this passage is worth offering, and on what grounds. A bookmark is
+   grounds by itself; anything else has to have been written out enough times to
+   show it is being returned to on purpose. */
+function memOfferable(p){
+  if (!p || p.memory) return null;              /* already in a recall */
+  const k = countKey(p);
+  if (!k) return null;
+  const c = store.counts[k];
+  if (c && c.no) return null;                   /* asked once, turned down */
+  const pin = findPinFor(p);
+  if (pin && pin.starred) return null;          /* already being learnt */
+  const times = countFor(p).total;
+  if (!pin && times < MEM_OFFER_AT) return null;
+  /* and it has to be something that can be cut into steps and fetched again */
+  if (!memStepList(memSpan(pin || memPinFor(p))).length) return null;
+  return {pin, times, why: pin ? 'pinned' : 'written'};
+}
+
+function renderMemOffer(){
+  const el = $('memOffer'), rows = [];
+  const cand = memOfferable(current);
+  if (cand) rows.push(
+    '<div class="orow"><p>' +
+    (cand.why === 'pinned'
+      ? 'You have this one bookmarked. <b>Learn it by heart?</b>'
+      : 'You have typed this ' + tally(cand.times, 'time') + '. <b>Learn it by heart?</b>') +
+    ' It will come back for review on the days you are about to forget it, with less ' +
+    'of the text on screen each time, until you are typing it from memory.</p>' +
+    '<button class="rbtn" id="memTake">start learning it</button>' +
+    '<button class="rbtn" id="memKnow">type it from memory</button>' +
+    '<button class="no" id="memNo">not this one</button></div>');
+  /* what is owed, said wherever the reader is. Not while they are already
+     carrying it: the line above the passage is counting that down already */
+  const recalling = store.settings.mode === 'memorise';
+  const due = recalling ? 0 : memCount();
+  if (due) rows.push(
+    '<div class="orow"><p><b>' + due + '</b> ' + (due === 1 ? 'passage is' : 'passages are') +
+    ' due for review' + (cand ? ', from what you are already learning' : '') + '.</p>' +
+    '<button class="rbtn" id="memGo">start reviewing</button></div>');
+  /* the end of the day's work, carried. Saying nothing here would leave the
+     reader in a state with no next and no obvious way out of it. It is also the
+     moment somebody thinks "can I just go through them anyway?", so that is the
+     moment to say yes. */
+  const pool = (recalling && !memRound.length) ? roundPool() : {pins: [], shelf: ''};
+  const ready = pool.pins.length;
+  if (recalling && !memLeft() && !memRound.length && current && (current.memory || current.recital))
+    rows.push(
+      '<div class="orow"><p><b>Nothing else is due today.</b> The rest comes back on ' +
+      'later days.' +
+      (ready ? ' You can still type out what you already know. That is never required ' +
+               'and it does not change what is due tomorrow.' : '') + '</p>' +
+      (ready ? '<button class="rbtn" id="memRoundGo">type ' + (ready === 1 ? 'it' :
+               'all ' + ready + (pool.shelf ? ' of ' + escapeHtml(pool.shelf) : '')) +
+               ' from memory</button>' : '') +
+      '<button class="rbtn" id="memDone">back to ' +
+      escapeHtml(MEM_MODES.indexOf(store.settings.memFrom) < 0 ? 'daily' : store.settings.memFrom) +
+      '</button></div>');
+
+  el.hidden = !rows.length;
+  el.innerHTML = rows.join('');
+  if ($('memTake')) $('memTake').addEventListener('click', memTakeUp);
+  /* claiming to know one already: the bookmark is not written until the claim
+     is made good, so a failed attempt leaves the desk exactly as it was */
+  if ($('memKnow')) $('memKnow').addEventListener('click', ()=>{
+    memRecite(findPinFor(current) || memPinFor(current));
+  });
+  if ($('memGo')) $('memGo').addEventListener('click', memStart);
+  if ($('memDone')) $('memDone').addEventListener('click', memLeave);
+  if ($('memRoundGo')) $('memRoundGo').addEventListener('click', memRunAll);
+  if ($('memNo')) $('memNo').addEventListener('click', ()=>{
+    const k = countKey(current);
+    if (k && store.counts[k]){ store.counts[k].no = 1; save(); }
+    renderMemOffer();     /* the row going is the whole of the answer */
+  });
+}
+
+/* taking one up: it is bookmarked if it wasn't, starred either way, and the
+   first recall follows at once. Offering to learn something and then leaving
+   the reader to go and find it would be the same failure the bar button was */
+function memTakeUp(){
+  if (!current) return;
+  let pin = findPinFor(current);
+  if (!pin){ pin = memPinFor(current); store.pins.push(pin); }
+  pin.starred = true;
+  save();
+  updatePinBtn(); updatePinResBtn(); updateStarBtn(); renderPins();
+  /* dealt straight away and ahead of everything else, whatever the day's
+     allowance of new steps has left. The reader has just asked for this one by
+     name, and answering "not today" to that would be absurd */
+  memQueue = [memSlip({pin, k: 0, n: memStepList(memSpan(pin)).length})];
+  memStart();
+}
+
+/* into a recall, remembering what to come back to. The mode is still a mode
+   underneath, because everything downstream of it (what tab means, what the
+   footer offers, what a fetch is for) reads the mode; it is simply not
+   something anyone can pick off the bar. */
+/* into memorising, remembering what to hand the reader back to */
+function memInto(){
+  if (store.settings.mode !== 'memorise'){
+    store.settings.memFrom = store.settings.mode;
+    store.settings.mode = 'memorise';
+  }
+  closeSuggest(); save(); syncBar();
+}
+function memStart(){ memInto(); newTest(); }
+function memLeave(){
+  const back = MEM_MODES.indexOf(store.settings.memFrom) < 0 ? 'daily' : store.settings.memFrom;
+  store.settings.memFrom = '';
+  setMode(back);
+}
+$('memChipOut').addEventListener('click', memLeave);
+
+/* the chip, which is the whole of the bar's part in this */
+function syncMemChip(){
+  const on = store.settings.mode === 'memorise';
+  $('memChip').hidden = !on;
+  if (!on) return;
+  if (memRound.length){
+    $('memChipText').textContent = 'memorising · ' + memRound.length + ' to go';
+    return;
+  }
+  const left = memLeft();
+  $('memChipText').textContent = 'memorising' + (left ? ' · ' + left + ' left' : ' · the last');
+}
+
+/* ---------- the memory pane ---------- */
+const MEM_FCAST = 30;
+function renderMemoryPane(){
+  memRoll();
+  const t = dayNo();
+  const pins = memStarred();
+  let learning = 0, known = 0;
+  const bars = new Array(MEM_FCAST).fill(0);
+  const rows = [];
+
+  for (const pin of pins){
+    const tr = memTrack(pin);
+    if (!tr.steps.length) continue;
+    /* said whole, out loud in the only way this app can hear: recited entire
+       with nothing on the screen. A stability number was a guess at the same
+       thing, and a worse one, because it was never something the reader did */
+    const said = memSaid(pinKey(pin));
+    if (said) known++; else learning++;
+    let soonest = null;
+    tr.items.forEach((it, k) => {
+      if (!it || !memLive(tr, k)) return;
+      if (soonest == null || it.due < soonest) soonest = it.due;
+      const at = it.due - t;
+      if (at >= 0 && at < MEM_FCAST) bars[at]++;
+    });
+    rows.push({pin, tr, said, soonest});
+  }
+
+  $('mDueN').textContent = memDueList().length;
+  $('mLearnN').textContent = learning;
+  $('mKnownN').textContent = known;
+
+  /* the round, which is the one thing here the schedule will never offer you */
+  syncRoundFrom();
+
+  const top = Math.max(1, ...bars);
+  $('mFcast').innerHTML = bars.map((n, i) =>
+    '<i class="' + (i === 0 ? 'today' : n ? 'due' : '') + '" style="height:' +
+    Math.round(100 * n / top) + '%" title="' + (i ? 'in ' + i + ' days' : 'today') + ': ' +
+    (n === 1 ? '1 passage due' : n + ' passages due') + '"></i>').join('');
+  const busiest = bars.indexOf(top);
+  $('mFcastNote').textContent = bars.some(Boolean)
+    ? 'Busiest day is ' + (busiest ? 'in ' + busiest + ' days' : 'today') + ', with ' +
+      (top === 1 ? '1 passage' : top + ' passages') + ' due.'
+    : 'Nothing is scheduled yet.';
+
+  rows.sort((a, b) => (a.soonest == null ? 1e9 : a.soonest) - (b.soonest == null ? 1e9 : b.soonest));
+  $('memList').innerHTML = rows.length ? rows.map(r => {
+    const n = r.tr.steps.length;
+    const whole = memSpan(r.pin), unit = memUnit(r.pin);
+    /* how far into the passage the reader has actually come, in its own verses */
+    const upto = r.tr.front >= 0 ? Math.min(r.tr.steps[r.tr.front].b + 1, whole) : 0;
+    const when = r.soonest == null ? 'not begun'
+               : r.soonest <= t ? 'due now' : memWhen(r.soonest - t);
+    return '<div class="mrow" data-key="' + escapeHtml(pinKey(r.pin)) + '">' +
+      '<div class="mm"><button class="mr">' + escapeHtml(r.pin.ref) + '</button>' +
+      '<div class="ms"><div class="sprog"><i style="width:' +
+        Math.round(100 * upto / Math.max(1, whole)) + '%"></i></div>' +
+      /* "all 2 verses" is not a sentence anybody says: a passage that comes
+         back whole every time is just its own length */
+      '<span>' + (n > 1 ? upto + ' of ' + tally(whole, unit)
+                        : tally(whole, unit)) + '</span>' +
+      '<span class="on">' + escapeHtml(when) + '</span></div>' +
+      /* the recital gets a line of its own: it is the one fact here that is
+         about something the reader did rather than something they are owed */
+      (r.said ? '<div class="ms"><span class="sd" title="you typed every verse of it with ' +
+                'nothing on screen">\u2713 typed from memory ' +
+                escapeHtml(memSaidWhen(r.said)) +
+                (r.said.n > 1 ? ', ' + tally(r.said.n, 'time') + ' in all' : '') +
+                '</span></div>' : '') +
+      '</div>' +
+      /* offered on every row, however little of the passage the steps have
+         reached. It was once held back until they had reached the end of it, on
+         the grounds that a button which could only fail is not an offer, but a
+         recital that fails is not written down and moves nothing that is due:
+         the reader who already knows a passage should not have to walk up to it
+         before being allowed to say so. */
+      '<button class="sy" title="type every verse of it with nothing on screen">from memory</button>' +
+      '<button class="dr" title="forget what has been learnt of this passage">reset</button></div>';
+  }).join('') : '<div class="empty">Nothing starred yet. Star a bookmark and it is taken up here, ' +
+                'a couple of verses at a time.</div>';
+
+  $('memList').querySelectorAll('.mrow').forEach(row => {
+    const pin = store.pins.find(p => pinKey(p) === row.dataset.key);
+    if (!pin) return;
+    row.querySelector('.mr').addEventListener('click', ()=> loadPin(pin));
+    row.querySelector('.sy').addEventListener('click', ()=> memRecite(pin));
+    row.querySelector('.dr').addEventListener('click', ()=>{
+      const pre = pinKey(pin) + '@';
+      for (const k of Object.keys(store.memory.items))
+        if (k.indexOf(pre) === 0) delete store.memory.items[k];
+      memQueue = memQueue.filter(q => q.ref !== pinKey(pin));
+      save(); renderMemoryPane(); syncBar();
+    });
+  });
+}
+
+/* how much new to take on a day, and how much you are aiming to hold on to.
+   Those are the only two dials FSRS actually wants from a reader, so they are
+   the only two here.
+
+   The first is stored as a count of turns, because a turn is what the deck deals,
+   but it is shown as the verses those turns add: nobody thinks about their
+   memorising in units of this app's scheduling. */
+const MEM_NEWS = [1, 2, 3, 5, 8];
+const MEM_AIMS = [[0.85, 'eight and a half in ten'], [0.9, 'nine in ten'], [0.95, 'nineteen in twenty']];
+function syncMemOpts(){
+  const nw = $('memNew'), rt = $('memRet');
+  nw.innerHTML = MEM_NEWS.map(n =>
+    '<option value="' + n + '">' + (n * MEM_SEG) + '</option>').join('');
+  rt.innerHTML = MEM_AIMS.map(a => '<option value="' + a[0] + '">' + a[1] + '</option>').join('');
+  nw.value = String(store.settings.memNew);
+  rt.value = String(store.settings.memAim);
+}
+/* the shelves a round could walk: everything by heart, and any bundle with
+   something on it that can be asked for whole. A shelf whose passages are all
+   still half learnt is not listed, because a round of it would be a round of
+   nothing. */
+function syncRoundFrom(){
+  const wrap = $('memDraw'), sel = $('roundFrom');
+  const all = memRoundable();
+  wrap.hidden = !all.length;
+  if (!all.length) return;
+  let from = store.settings.roundFrom || 'all';
+  const shelves = bundles().map(b => ({name: b, n: memRoundable(b).length})).filter(b => b.n);
+  /* the shelf a setting points at can be taken apart under it */
+  if (from.indexOf('bundle:') === 0 && !shelves.some(b => 'bundle:' + b.name === from)){
+    from = 'all'; store.settings.roundFrom = from; save();
+  }
+  const opt = (v, t)=>{ const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); };
+  sel.replaceChildren();
+  opt('all', 'everything \u00b7 ' + all.length);
+  for (const b of shelves) opt('bundle:' + b.name, b.name + ' \u00b7 ' + b.n);
+  sel.value = from;
+  const pool = roundPool();
+  $('memAll').textContent = 'start';
+  $('memAllNote').textContent = 'Type each one out in full with nothing on screen, in Bible ' +
+    'order. This is never required and it does not change what is due tomorrow, so do it as ' +
+    'often as you like. Getting one wrong changes nothing.' +
+    (shelves.length ? '' : ' Put bookmarks on a bundle and you can pick one shelf on its own.');
+}
+$('roundFrom').addEventListener('change', ()=>{
+  store.settings.roundFrom = $('roundFrom').value; save(); syncRoundFrom();
+});
+$('memAll').addEventListener('click', memRunAll);
+$('memNew').addEventListener('change', ()=>{
+  store.settings.memNew = +$('memNew').value; save(); renderMemoryPane(); syncBar();
+});
+$('memRet').addEventListener('change', ()=>{
+  store.settings.memAim = +$('memRet').value; save(); renderMemoryPane();
+});
+
+/* an imported file's deck, taken at arm's length. Every number here steers a
+   date, and a hand-edited or truncated file must not be able to park a step in
+   the year 3000 or hand it a difficulty the curves can't take. */
+function sanitizeMemory(m){
+  const out = {items: {}, said: {}, day: '', fresh: 0};
+  if (!m || typeof m !== 'object') return out;
+  const saidIn = m.said && typeof m.said === 'object' ? m.said : {};
+  for (const k of Object.keys(saidIn)){
+    const v = saidIn[k], at = Math.round(v && v.at);
+    if (!(at > 0)) continue;
+    out.said[k] = {at: Math.min(at, dayNo()), n: Math.min(Math.max(1, Math.round(v.n) || 1), 1e5)};
+  }
+  const t = dayNo(), items = m.items && typeof m.items === 'object' ? m.items : {};
+  for (const k of Object.keys(items)){
+    const v = items[k];
+    if (!v || typeof v !== 'object' || k.indexOf('@') < 0) continue;
+    const reps = Math.max(0, Math.round(v.reps) || 0);
+    if (!reps) continue;
+    const s = memS(+v.s || 0.01), d = memD(+v.d || 5);
+    out.items[k] = {
+      d: d, s: s, reps: Math.min(reps, 1e5),
+      lapses: Math.min(Math.max(0, Math.round(v.lapses) || 0), 1e5),
+      /* a due date is clamped into a window either side of today: far enough
+         back that a deck left alone for a year still reads as overdue, and no
+         further forward than the curve would ever have put it */
+      due: Math.min(t + 36500, Math.max(t - 3650, Math.round(v.due) || t)),
+      last: v.last == null ? null : Math.min(t, Math.round(v.last) || t),
+      g: [1, 2, 3, 4].indexOf(v.g) < 0 ? 3 : v.g,
+      stage: STAGES.indexOf(v.stage) < 0 ? STAGES[0] : v.stage,
+    };
+  }
+  if (m.day === localDay()){ out.day = m.day; out.fresh = Math.max(0, Math.round(m.fresh) || 0); }
+  return out;
+}
+
 /* ---------- the desk ----------
-   four unrelated things share one surface, so they are panes behind a tab strip
+   five unrelated things share one surface, so they are panes behind a tab strip
    rather than four sections stacked down a single scroll. Which tab was last
    open is remembered: someone setting up a key comes back to the key, not to
    the top of their bookmarks. */
-const DESK_TABS = ['bookmarks', 'scribe', 'sources', 'data'];
+const DESK_TABS = ['bookmarks', 'memory', 'scribe', 'sources', 'data'];
 function showTab(name){
   if (DESK_TABS.indexOf(name) < 0) name = 'bookmarks';
   store.settings.deskTab = name; save();
@@ -2826,6 +4469,7 @@ function showTab(name){
   });
   els.drawer.querySelectorAll('.pane').forEach(p => { p.hidden = p.dataset.tab !== name; });
   if (name === 'scribe') renderScribe();
+  if (name === 'memory') renderMemoryPane();
   if (name === 'sources') renderStoredText();
 }
 function focusTab(name){
@@ -2887,6 +4531,16 @@ function sanitizeSettings(st){
   out.pinFrom = (from === 'all' || from === 'starred' || from.startsWith('bundle:')) ? from : 'all';
   out.pinOrder = out.pinOrder === 'order' ? 'order' : 'shuffled';
   out.pinCursor = typeof out.pinCursor === 'string' ? out.pinCursor : '';
+  /* the two dials the deck answers to. Both steer dates, so neither is taken on
+     trust from a file: anything not actually on the control goes back to what
+     the control opens on */
+  out.memNew = MEM_NEWS.indexOf(Math.round(out.memNew)) < 0 ? DEFAULT_SETTINGS.memNew : Math.round(out.memNew);
+  out.memAim = MEM_AIMS.some(a => a[0] === +out.memAim) ? +out.memAim : DEFAULT_SETTINGS.memAim;
+  /* where a recall would hand the reader back to. A mode this app hasn't got
+     would strand the chip's way out */
+  out.memFrom = MEM_MODES.indexOf(out.memFrom) < 0 ? '' : out.memFrom;
+  const rf = String(out.roundFrom || 'all');
+  out.roundFrom = (rf === 'all' || rf.indexOf('bundle:') === 0) ? rf : 'all';
   return out;
 }
 
@@ -2906,6 +4560,9 @@ function syncBar(){
   $('mRandom').classList.toggle('on', s.mode==='random');
   $('mPassage').classList.toggle('on', s.mode==='passage');
   $('mPinned').classList.toggle('on', s.mode==='pinned');
+  /* the chip is the bar's whole part in this: it shows only while a recall is
+     under way, and it is never something to select */
+  syncMemChip();
   $('mScribe').classList.toggle('on', s.mode==='scribe');
   $('mCustom').classList.toggle('on', s.mode==='custom');
   /* your own text has no translation to choose, so the menu steps aside */
@@ -2923,6 +4580,9 @@ function syncBar(){
 }
 function setMode(m){
   closeSuggest();
+  /* picking anything off the bar ends a round and a recall both, and there is
+     then nothing left to come back to */
+  if (m !== 'memorise'){ store.settings.memFrom = ''; memRound = []; }
   store.settings.mode = m; save(); syncBar();
   if (m === 'passage'){ els.refInput.value = store.settings.passageRef || ''; els.refInput.focus(); }
   else newTest();
@@ -3416,8 +5076,12 @@ $('impFile').addEventListener('change', async ()=>{
       best: (j.best && typeof j.best.wpm === 'number') ? j.best : null,
       history: Array.isArray(j.history) ? j.history.slice(0,8) : [],
       counts: sanitizeCounts(j.counts),
+      memory: sanitizeMemory(j.memory),
     };
     pruneCounts();
+    memPrune();                  /* steps whose bookmark didn't survive the file */
+    memQueue = []; memScored = {}; memPending = null;
+    syncMemOpts();
     pinDeck = [];
     save(); syncBar(); renderPins(); renderScribe(); renderAttribution(null, false);
     els.refInput.value = store.settings.passageRef || '';
@@ -3543,6 +5207,14 @@ window.addEventListener('keydown', e=>{
     if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || tag === 'A') return;
     if (tag === 'BUTTON') return;
   }
+  /* one word handed back, from wherever the hands happen to be. Ctrl is what
+     keeps it off the passage itself: a bare key would be a letter to type */
+  if (e.key === ' ' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); peekWord(); return; }
+  /* and the four answers, while there is a score on screen to argue with */
+  if (finished && !$('grades').hidden && e.key >= '1' && e.key <= '4' &&
+      !e.ctrlKey && !e.metaKey && !e.altKey){
+    e.preventDefault(); memApply(+e.key); return;
+  }
   if (e.key === 'Tab' && e.shiftKey){ e.preventDefault(); goTrail(-1); return; }
   if (e.key === 'Tab'){
     e.preventDefault();
@@ -3584,6 +5256,16 @@ window.addEventListener('resize', ()=>{
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ sizeWrap(); placeCaret(); });
 
 /* ============================== boot ============================== */
+memRoll();
+memHeal();
+syncMemOpts();
+/* a recall is a state and not a mode, so nothing ever opens into one that has
+   nothing left in it: a reader coming back to an empty deck should find the
+   screen they left, not a notice where the verse of the day belongs */
+if (store.settings.mode === 'memorise' && !memCount()){
+  store.settings.mode = MEM_MODES.indexOf(store.settings.memFrom) < 0 ? 'daily' : store.settings.memFrom;
+  store.settings.memFrom = '';
+}
 syncBar();
 renderAttribution(null, false);
 renderPins();
