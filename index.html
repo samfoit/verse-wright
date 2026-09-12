@@ -203,13 +203,64 @@
   .notice em{color:var(--red);font-style:normal}
   .notice .hint{color:var(--faint);display:block;margin-top:.5rem}
 
+  /* ---------- while a passage is on its way ---------- */
+  .bookload{display:flex;flex-direction:column;align-items:flex-start;gap:1.15rem}
+  .bk{position:relative;width:8rem;height:5.3rem;perspective:36rem}
+  /* the two leaves lying open. They are filled rather than outlined, because a
+     hairline rectangle on this ground is not a book, it is barely a shape. The
+     inner edge of the left one is the fold */
+  .bk::before, .bk::after{
+    content:'';position:absolute;top:0;width:50%;height:100%;
+    background:var(--raised);border:1px solid var(--line);
+  }
+  .bk::before{left:0;border-right-color:var(--gilt-dim);border-radius:3px 0 0 3px}
+  .bk::after{left:50%;border-left:none;border-radius:0 3px 3px 0}
+  /* a leaf lifts off the right page and falls onto the left. Three of them, a
+     third of a turn apart, so the riffle never has a seam in it. It carries a
+     shadow and a lighter free edge, which is the whole of what separates a
+     page in the air from the one lying still underneath it */
+  .bk i{
+    position:absolute;top:0;left:50%;width:50%;height:100%;
+    transform-origin:left center;
+    border:1px solid var(--line);border-left-color:var(--gilt-dim);
+    border-radius:0 3px 3px 0;
+    background:linear-gradient(to left, #30251a, var(--raised));
+    box-shadow:0 0 .8rem rgba(0,0,0,.55);
+    animation:leaf 1.75s cubic-bezier(.42,.04,.58,.96) infinite;
+  }
+  .bk i:nth-child(2){animation-delay:.583s}
+  .bk i:nth-child(3){animation-delay:1.166s}
+  /* it stops a hair short of flat so it never lies in the same plane as the
+     left page, which is where a renderer starts flickering between the two */
+  @keyframes leaf{
+    0%  {transform:rotateY(0);       opacity:0}
+    5%  {opacity:1}
+    54% {opacity:1}
+    60% {transform:rotateY(-177deg); opacity:0}
+    100%{transform:rotateY(-177deg); opacity:0}
+  }
+  .bkword{
+    font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;color:var(--faint);
+    animation:breathe 1.75s ease-in-out infinite;
+  }
+  @keyframes breathe{50%{color:var(--mut)}}
+
   /* ---------- results ---------- */
   .results{display:none;text-align:left}
   .results.show{display:block}
   .bigwpm{font-family:var(--serif-display);font-weight:500;font-size:5.5rem;line-height:1;color:var(--gilt)}
   .bigwpm small{font-family:var(--mono);font-size:.8rem;color:var(--faint);letter-spacing:.15em;margin-left:.6rem}
   .pbtag{display:inline-block;font-size:.62rem;letter-spacing:.15em;color:var(--leather);background:var(--gilt);border-radius:3px;padding:.15rem .5rem;vertical-align:.5rem;margin-left:.8rem}
-  .rref{font-family:var(--serif-display);font-style:italic;font-size:1.2rem;color:var(--paper);margin:.9rem 0 1.2rem}
+  .rref{font-family:var(--serif-display);font-style:italic;font-size:1.2rem;color:var(--paper);margin:.9rem 0 1rem}
+  .rread{margin:0 0 1.5rem;border-left:1px solid var(--line);padding-left:1rem}
+  .rtext{
+    font-family:var(--serif-read);font-size:clamp(.95rem, .85rem + .3vw, 1.1rem);
+    line-height:1.78;color:var(--paper);max-height:min(38vh,17rem);overflow-y:auto;
+  }
+  .rtext .vn{font-size:.6em}
+  .rtext:focus-visible{outline:1px solid var(--gilt);outline-offset:4px}
+  .rtally{margin-top:.75rem;font-size:.68rem;color:var(--faint);letter-spacing:.04em}
+  .rtally b{color:var(--gilt-dim);font-weight:500}
   .rstats{display:flex;gap:2.2rem;font-size:.72rem;color:var(--mut);flex-wrap:wrap}
   .rstats b{display:block;font-size:1.05rem;color:var(--paper);font-weight:500;margin-top:.2rem}
   .ractions{margin-top:1.8rem;display:flex;gap:.6rem;flex-wrap:wrap}
@@ -422,6 +473,10 @@
     #caret{animation:none;transition:none}
     #text{transition:none}
     .drawer{transition:none}
+    /* one leaf held part-way over says the same thing without the motion */
+    .bk i{animation:none;opacity:1;transform:rotateY(-34deg)}
+    .bk i:nth-child(2), .bk i:nth-child(3){display:none}
+    .bkword{animation:none}
   }
 </style>
 </head>
@@ -522,6 +577,10 @@
     <div class="results" id="results">
       <div class="bigwpm"><span id="rWpm">0</span><small>WPM</small><span class="pbtag" id="pbTag" hidden>BEST</span></div>
       <div class="rref" id="rRef"></div>
+      <div class="rread" id="rRead" hidden>
+        <div class="rtext" id="rText" tabindex="0" role="region" aria-label="the passage you wrote"></div>
+        <div class="rtally" id="rTally"></div>
+      </div>
       <div class="rstats">
         <div>accuracy<b id="rAcc"></b></div>
         <div>raw<b id="rRaw"></b></div>
@@ -664,7 +723,7 @@
   </div>
 
   <div class="pane" data-tab="data" id="pane-data" role="tabpanel" aria-labelledby="tab-data" tabindex="0" hidden>
-    <div class="sub">Settings, bookmarks, best, recent runs, and your publisher keys. Download them as JSON and import the file on another device to arrive set up exactly as you are here. Cached text is left out; it is fetched again as it is needed.</div>
+    <div class="sub">Settings, bookmarks, best, recent runs, how many times you have written each passage, and your publisher keys. Download them as JSON and import the file on another device to arrive set up exactly as you are here. Cached text is left out; it is fetched again as it is needed.</div>
     <label class="dopt" for="expKeys">
       <input type="checkbox" id="expKeys" checked>
       <span><b>Carry the publisher keys.</b> They travel so the other browser needs no setting up. That makes the file a password, so keep it to yourself. Untick this to export a copy fit to pass on to someone else.</span>
@@ -691,7 +750,7 @@ const DEFAULT_SETTINGS = {mode:'daily', count:2, translation:'web', passageRef:'
                          customText:'', customTitle:''};
 const DEFAULT_SCRIBE = {book:0, chapter:1, verse:1, done:false};
 let store = { settings:Object.assign({}, DEFAULT_SETTINGS), pins:[], best:null, history:[],
-              scribe:Object.assign({}, DEFAULT_SCRIBE), keys:{} };
+              scribe:Object.assign({}, DEFAULT_SCRIBE), keys:{}, counts:{} };
 try {
   const raw = localStorage.getItem(LS_KEY) || localStorage.getItem(LS_KEY_LEGACY);
   if (raw) { const s = JSON.parse(raw); store = Object.assign(store, s);
@@ -716,6 +775,8 @@ store.scribe = Object.assign({}, DEFAULT_SCRIBE, store.scribe);
    Crossway ask that an ESV key not be passed on, so that box is what separates
    moving your own setup from handing it to somebody else. */
 store.keys = Object.assign({esv:'', apibible:'', nlt:'', nivBible:''}, store.keys);
+/* a store saved before passages were counted simply has none yet */
+if (!store.counts || typeof store.counts !== 'object') store.counts = {};
 
 /* the first open of each day lands on the verse of the day; once it has been
    seen, a mode the user picks holds for the rest of the day */
@@ -923,6 +984,9 @@ function finish(){
   if (isPB) store.best = {wpm, acc, ref: current.reference, date: new Date().toISOString().slice(0,10)};
   store.history.unshift({wpm, acc, ref: current.reference, secs});
   store.history = store.history.slice(0,8);
+  /* counted here and nowhere else: a passage is written when it is finished,
+     and abandoning one halfway through has never written it */
+  const times = bumpCount(current);
   save();
 
   $('rWpm').textContent = wpm;
@@ -933,6 +997,7 @@ function finish(){
   $('rErr').textContent = errors;
   $('rTime').textContent = secs + 's';
   $('rChars').textContent = chars.length;
+  renderRead(current, times);
   updatePinResBtn();
   updateStarBtn();
   renderHistory();
@@ -1006,6 +1071,93 @@ function renderHistory(){
   $('rhist').hidden = store.history.length < 2;
 }
 function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ============================== the tally ==============================
+   how many times each passage has been carried all the way to the end, kept
+   for the day and for good. A passage is counted by what it is and not by
+   whose wording was on screen, so John 3:16 in the ESV adds to the same tally
+   as the WEB, the way a bookmark is the passage rather than one printing of
+   it. Two of your own texts filed under one title are still two passages, so
+   those are counted by the words themselves. */
+function countKey(p){
+  if (!p) return '';
+  if (p.custom) return 'custom:' + textHash(p.custom.text);
+  return String(p.reference || '').trim().toLowerCase();
+}
+
+/* the day's count carries its own date, so a tally left overnight reads as
+   zero for today on the next run rather than needing a clock to reset it */
+function countFor(p){
+  const c = store.counts[countKey(p)];
+  if (!c) return {today:0, total:0};
+  return {today: c.day === localDay() ? c.today : 0, total: c.total};
+}
+
+function bumpCount(p){
+  const k = countKey(p);
+  if (!k) return {today:0, total:0};
+  const day = localDay();
+  const c = store.counts[k] || {total:0, today:0, day:day};
+  if (c.day !== day){ c.day = day; c.today = 0; }
+  c.total++; c.today++; c.at = Date.now();
+  store.counts[k] = c;
+  pruneCounts();
+  return {today:c.today, total:c.total};
+}
+
+/* the tally is a lifetime record and nothing here expires, so it is held to a
+   size a browser store can carry. The passages written longest ago go first */
+const COUNTS_MAX = 600;
+function pruneCounts(){
+  const ks = Object.keys(store.counts);
+  if (ks.length <= COUNTS_MAX) return;
+  ks.sort((a,b) => (store.counts[b].at || 0) - (store.counts[a].at || 0));
+  for (const k of ks.slice(COUNTS_MAX)) delete store.counts[k];
+}
+
+function sanitizeCounts(c){
+  if (!c || typeof c !== 'object') return {};
+  const out = {}, day = localDay();
+  for (const k of Object.keys(c)){
+    const v = c[k], total = v && Math.round(v.total);
+    if (!(total > 0)) continue;
+    const fresh = v.day === day;
+    out[String(k).trim().toLowerCase()] = {
+      total: Math.min(total, 1e7),
+      today: fresh ? Math.max(0, Math.min(Math.round(v.today) || 0, total)) : 0,
+      day: fresh ? day : '',
+      at: Math.round(v.at) || 0,
+    };
+  }
+  return out;
+}
+
+/* the passage read back whole, now that it has been written out. The typing
+   surface shows it a screenful at a time under a caret, which is no way to
+   read anything; here it is only words, in the same tidied form that was
+   typed, so what is on this screen is what your hands just made. */
+function renderRead(p, times){
+  if (!p || !p.verses || !p.verses.length){ $('rRead').hidden = true; return; }
+  const numbered = p.verses.length > 1;
+  const html = p.verses.map(v => {
+    const t = cleanText(v.text);
+    if (!t) return '';
+    return (numbered ? '<span class="vn">' + v.verse + '</span>' : '') + escapeHtml(t);
+  }).filter(Boolean).join(' ');
+  if (!html){ $('rRead').hidden = true; return; }
+  $('rText').innerHTML = html;
+  $('rText').scrollTop = 0;
+  $('rTally').innerHTML = tallyLine(times);
+  $('rRead').hidden = false;
+}
+
+/* reads as a sentence rather than two numbers, because that is what it is */
+function tallyLine(c){
+  if (c.total <= 1) return 'the first time you have written this passage';
+  const today = c.today === 1 ? 'once today' : tally(c.today, 'time') + ' today';
+  return 'written <b>' + today + '</b> · <b>' +
+         c.total.toLocaleString() + '</b> times in all';
+}
 
 function showTyping(){
   els.results.classList.remove('show');
@@ -1459,6 +1611,17 @@ function showNotice(html){
   renderHints();
   reclaimFocus();   /* a bar button click can land here; don't leave focus on it */
 }
+
+/* the one notice that has nothing to tell you: while a passage is on its way,
+   a book turns its own pages. It goes through showNotice like any other, so a
+   load that fails replaces it and it can never be left turning on an empty
+   screen. The word is the live region; the book is decoration and says so. */
+const BOOK_HTML =
+  '<div class="bookload">' +
+    '<div class="bk" aria-hidden="true"><i></i><i></i><i></i></div>' +
+    '<div class="bkword" role="status">fetching the text</div>' +
+  '</div>';
+function showLoading(){ showNotice(BOOK_HTML); }
 
 /* every passage in the app comes through here. The public-domain translations
    go to bible-api.com as prose; the modern three go to their publishers, which
@@ -1970,7 +2133,7 @@ async function newTest(opts){
   /* only announce a fetch that is actually taking a moment. Re-slicing a held
      chapter renders in the same breath, and blanking the passage on the way to
      redrawing it one verse longer reads as a reload it never was */
-  const notice = setTimeout(()=>{ if (seq === loadSeq) showNotice('fetching the text…'); }, 150);
+  const notice = setTimeout(()=>{ if (seq === loadSeq) showLoading(); }, 150);
   try {
     let p;
     if (s.mode === 'passage'){
@@ -2028,7 +2191,7 @@ async function newTest(opts){
 async function loadRef(ref, daily, random, tr){
   const seq = ++loadSeq;
   const use = tr || store.settings.translation;
-  showNotice('fetching the text…');
+  showLoading();
   try {
     const p = await fetchPassage(ref, use);
     p.daily = !!daily;
@@ -2348,7 +2511,7 @@ async function loadPin(p){
     renderPassage(own);
     return;
   }
-  showNotice('fetching the text…');
+  showLoading();
   const tr = pinTranslation(p);
   try { const pass = await fetchPassage(p.ref, tr);
         if (seq === loadSeq) renderPassage(pass); }
@@ -3252,7 +3415,9 @@ $('impFile').addEventListener('change', async ()=>{
       scribe: sanitizeScribe(j.scribe),
       best: (j.best && typeof j.best.wpm === 'number') ? j.best : null,
       history: Array.isArray(j.history) ? j.history.slice(0,8) : [],
+      counts: sanitizeCounts(j.counts),
     };
+    pruneCounts();
     pinDeck = [];
     save(); syncBar(); renderPins(); renderScribe(); renderAttribution(null, false);
     els.refInput.value = store.settings.passageRef || '';
