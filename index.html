@@ -36,8 +36,13 @@
     color:var(--paper);
     font-family:var(--mono);
     display:flex;flex-direction:column;
-    min-height:100vh;
+    /* dvh, because 100vh on a phone means the screen as it would be with the
+       browser's own bars out of the way, which is taller than the screen
+       actually is for most of the time anyone is looking at it */
+    min-height:100vh;min-height:100dvh;
     overflow-x:hidden;
+    /* a swipe that overshoots in the middle of a verse must not reload the page */
+    overscroll-behavior-y:none;
   }
   /* gilded page edge */
   .gilt-edge{height:3px;background:linear-gradient(90deg,transparent 0%,var(--gilt-dim) 12%,var(--gilt) 50%,var(--gilt-dim) 88%,transparent 100%);flex:none}
@@ -638,14 +643,136 @@
     color:#453b32;letter-spacing:.04em;
   }
 
-  .ghost{position:fixed;top:-3rem;left:0;opacity:0;width:1px;height:1px;border:none}
-
-  @media (max-width:640px){
-    header{padding:1rem 1.2rem .4rem}
-    .rspeed{font-size:3.1rem}
-    #refInput{width:10rem}
+  /* invisible, and yet sitting exactly where the caret is. Nothing here is
+     decoration: opacity and the negative stacking order keep it out of sight
+     behind the passage, pointer-events hands the tap through to the wrap that
+     knows what to do with it, caret-color hides the system cursor that would
+     otherwise blink alongside our own, and contain stops a field whose size we
+     set by hand from asking the layout any questions. font-size is the one that
+     matters most on a phone: iOS zooms the whole page in when focus lands on a
+     field set below 16px, and this one used to inherit whatever the body had. */
+  .ghost{
+    position:absolute;top:0;left:0;width:1px;height:1.2em;
+    font:inherit;font-size:1rem;line-height:1;
+    opacity:0;z-index:-1;pointer-events:none;caret-color:transparent;
+    border:0;padding:0;margin:0;background:none;resize:none;overflow:hidden;
+    border-radius:0;contain:strict;
+    /* deliberately not white-space:nowrap. It is the obvious thing to put on a
+       one-line field, and on Safari it makes the browser trim the value when
+       focus lands, which would silently eat the space at the end of a word and
+       read to us as a letter taken back. Nothing here is laid out by wrapping
+       anyway: the box is measured and placed by hand. */
   }
+
+  /* ---------- the settings, once they are in the desk ----------
+     the same controls, given the room the bar could not give them: one group to
+     a line, laid out down the pane instead of along a row */
+  .mhost{display:flex;flex-direction:column;gap:.7rem}
+  .mhost .grp{
+    display:flex;align-items:center;flex-wrap:wrap;gap:.2rem;
+    background:var(--raised);border:1px solid var(--line);border-radius:6px;padding:.3rem;
+  }
+  .mhost #refWrap{display:none;position:relative}
+  .mhost #refWrap.show{display:flex}
+  .mhost .grp > button, .mhost .grp > span{font:inherit;font-size:.8rem}
+  .mhost .grp button{
+    color:var(--mut);background:none;border:none;cursor:pointer;border-radius:4px;
+    min-height:44px;padding:.3rem .7rem;
+  }
+  .mhost .grp button.on{color:var(--gilt)}
+  .mhost #refInput{
+    font:inherit;font-size:1rem;flex:1 1 10rem;min-height:44px;
+    color:var(--paper);background:none;border:none;padding:.3rem .5rem;
+  }
+  /* named by id because the bar gives it one: #translation is held to 5.4rem so
+     it sits in a row of controls, and in a pane it has a whole line to itself */
+  .mhost select, .mhost #translation{width:100%;min-height:44px;font-size:.95rem}
+  .mhost .sep{display:none}
+
+  /* .bar .grp sets these to flex and carries two classes doing it, so the rule
+     that puts this one away has to be named just as fully to be heard */
+  .bar .sheetgrp{display:none}
+  #sheetBtn{display:flex;align-items:center;gap:.4rem}
+  #sheetBtn .caretdown{color:var(--faint);font-size:.7em}
+  #sheetMode{color:var(--gilt)}
+
+  /* ---------- the phone ----------
+     the bar sheds its settings here (applyBarPlacement does the moving) and
+     keeps only what a hand reaches for in the middle of a passage, plus the one
+     button that fetches the rest back */
+  @media (max-width:768px){
+    .bar .sheetgrp{display:flex}
+    header{padding:.85rem 1.1rem .3rem}
+    .masthead{font-size:1.3rem}
+    .masthead .amp{display:block;margin-left:0;font-size:.8rem}
+    main{padding:0 1.1rem 2rem}
+    .bar{gap:.5rem;padding:.3rem 1rem .7rem;font-size:.82rem}
+    .refline{font-size:1rem;margin-bottom:1rem}
+    .drawer{width:100%;border-left:none}
+    /* six sections will not stand in one line this narrow, and a strip that
+       scrolls sideways hides whichever of them happens to be off the end. They
+       wrap instead: every section is on screen and every one can be hit. */
+    .drawer .tabs{flex-wrap:wrap;row-gap:.2rem}
+    .drawer .tabs button{font-size:.7rem;padding:.5rem .55rem}
+  }
+  @media (max-width:640px){
+    .rspeed{font-size:3.1rem}
+  }
+
+  /* ---------- a finger, not a pointer ----------
+     these are about what is holding the device rather than how wide it is: a
+     phone in landscape is a wide screen still being tapped. 44px is the size of
+     the thing doing the tapping. */
+  @media (pointer:coarse){
+    .bar button, .bar select{min-height:44px;padding:.4rem .7rem}
+    .navgrp button{font-size:1.1rem;padding:.3rem .7rem;min-height:44px}
+    .pinbtn, .starbtn{font-size:.78rem;padding:.5rem .4rem;min-height:44px}
+    .drawer .close{min-width:44px;min-height:44px}
+    .drawer .tabs button{min-height:44px}
+    /* "just start typing" is a thing to do on a desk. A phone has no keyboard
+       until it is asked for one, and asking is the whole instruction */
+    .veil{font-size:.8rem}
+    #veil .desktop{display:none}
+  }
+  @media (pointer:fine){
+    #veil .touch{display:none}
+  }
+
+  /* ---------- restart, for screens with no escape key ----------
+     the passage is begun again with esc, and a touch keyboard has no esc. On
+     anything being tapped, the same instruction gets a button under the text.
+     Monkeytype does exactly this, and for the same reason. */
+  #restartBtn{display:none}
+  @media (pointer:coarse) and (max-width:900px){
+    #restartBtn{
+      display:block;margin:1.4rem auto 0;font:inherit;font-size:.8rem;
+      letter-spacing:.1em;text-transform:uppercase;padding:.9rem 2rem;
+      color:var(--mut);background:none;border:1px solid var(--line);border-radius:6px;
+      cursor:pointer;
+    }
+    #restartBtn:focus-visible{outline:1px solid var(--gilt);outline-offset:2px}
+  }
+
+  /* ---------- while the keyboard is up ----------
+     set from the visual viewport, because nothing else on a phone admits that
+     half the screen has gone. The masthead is a title, and a title can wait;
+     the passage cannot. */
+  body.kbd-open header{display:none}
+  body.kbd-open .bar{padding:.2rem 1rem .3rem}
+  body.kbd-open .refline{margin-bottom:.6rem}
+  /* pinning and starring are things done to a passage, not while writing one,
+     and on this much screen they were costing a whole line of it */
+  body.kbd-open .refline .pinbtn, body.kbd-open .refline .starbtn{display:none}
+  body.kbd-open footer{display:none}
+  body.kbd-open #restartBtn{display:none}
+
   @media (prefers-reduced-motion:reduce){
+    /* asked for no motion, and given none: the exceptions below are a way of
+       saying the same thing a still picture says, not an animation kept back */
+    *, *::before, *::after{
+      animation-duration:.001ms !important;animation-iteration-count:1 !important;
+      transition-duration:.001ms !important;scroll-behavior:auto !important;
+    }
     #caret{animation:none;transition:none}
     #text{transition:none}
     .drawer{transition:none}
@@ -664,7 +791,16 @@
 </header>
 
 <nav class="bar" aria-label="test configuration">
-  <div class="grp" role="group" aria-label="source">
+  <!-- the way in to everything the bar is carrying, on a screen too narrow to
+       carry it. It names the mode it would open, so the row still says what is
+       being typed rather than making the reader go and look. Only on a phone:
+       on a wide screen the controls themselves are right here. -->
+  <div class="grp sheetgrp">
+    <button id="sheetBtn" aria-haspopup="dialog">
+      <span id="sheetMode">daily</span><span class="caretdown" aria-hidden="true">▾</span>
+    </button>
+  </div>
+  <div class="grp" data-sheet role="group" aria-label="source">
     <button id="mDaily" title="the verse of the day">daily</button>
     <button id="mRandom" title="a random passage each run">random</button>
     <button id="mPassage" title="type a passage you choose">passage</button>
@@ -672,7 +808,7 @@
     <button id="mScribe" title="copy the whole Bible in order, verse by verse">scribe</button>
     <button id="mCustom" title="type text of your own">custom</button>
   </div>
-  <div class="grp" id="countGrp" role="group" aria-label="verse count">
+  <div class="grp" data-sheet id="countGrp" role="group" aria-label="verse count">
     <button data-count="1">1</button>
     <button data-count="2">2</button>
     <button data-count="3">3</button>
@@ -680,14 +816,14 @@
     <button data-count="10">10</button>
     <span class="sep"></span><span style="padding-right:.4rem">verses</span>
   </div>
-  <div class="grp show" id="refWrap">
+  <div class="grp show" data-sheet id="refWrap">
     <input id="refInput" placeholder="John 3:16-18 · ps 23 · 1 thess 5" spellcheck="false"
            autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list"
            aria-controls="refSuggest">
     <button id="refGo">go</button>
     <div class="suggest" id="refSuggest" role="listbox" aria-label="matching passages" hidden></div>
   </div>
-  <div class="grp" id="trGrp">
+  <div class="grp" data-sheet id="trGrp">
     <select id="translation" aria-label="translation">
       <optgroup label="modern · your key">
         <option value="esv">ESV</option>
@@ -744,10 +880,25 @@
         <span class="mdue" id="mDueText"></span>
       </div>
       <div class="textwrap" id="textwrap">
-        <div id="text"></div>
+        <div id="text" translate="no"></div>
         <div id="caret" hidden></div>
-        <div class="veil" id="veil">click, or just start typing</div>
+        <!-- the field the passage is actually typed into. It is invisible, but it
+             is not off somewhere else: it rides on the caret (see placeCaret), so
+             that when a phone lifts its keyboard and scrolls the focused element
+             into view, the thing it scrolls to is the line being written. Parked
+             off-screen, as it was, the same reflex carried the passage away. The
+             attributes are all refusals: autocorrect, autofill, password managers
+             and Grammarly all want to help with a field like this, and every one
+             of them would type into the run. -->
+        <textarea class="ghost" id="ghost" aria-label="typing input"
+                  autocapitalize="off" autocapitalize="none" autocomplete="off"
+                  autocorrect="off" spellcheck="false" translate="no"
+                  data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false"
+                  data-bwignore data-1p-ignore data-lpignore="true" data-form-type="other"
+                  list="autocompleteOff"></textarea>
+        <div class="veil" id="veil"><span class="desktop">click, or just start typing</span><span class="touch">tap to bring the keyboard back</span></div>
       </div>
+      <button id="restartBtn" aria-label="start this passage again">start again</button>
     </div>
 
     <div class="flash" id="flash" aria-live="polite"></div>
@@ -813,18 +964,30 @@
   <div class="notice-copy" id="copyLine" hidden></div>
 </footer>
 
-<input class="ghost" id="ghost" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="typing input">
-
 <div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="the desk">
   <button class="close" id="drawerClose" aria-label="close">✕</button>
   <h2>The desk</h2>
 
   <div class="tabs" role="tablist" aria-label="desk sections">
+    <!-- only on a narrow screen, where the control bar has handed its settings
+         over to this pane rather than crowding them into a row no thumb can
+         hit. See applyBarPlacement. -->
+    <button role="tab" data-tab="passage" id="tab-passage" aria-controls="pane-passage" aria-selected="false" tabindex="-1" hidden>passage</button>
     <button role="tab" data-tab="bookmarks" id="tab-bookmarks" aria-controls="pane-bookmarks" aria-selected="true">bookmarks</button>
     <button role="tab" data-tab="scribe" id="tab-scribe" aria-controls="pane-scribe" aria-selected="false" tabindex="-1">scribe</button>
     <button role="tab" data-tab="memory" id="tab-memory" aria-controls="pane-memory" aria-selected="false" tabindex="-1">memory</button>
     <button role="tab" data-tab="sources" id="tab-sources" aria-controls="pane-sources" aria-selected="false" tabindex="-1">sources</button>
     <button role="tab" data-tab="data" id="tab-data" aria-controls="pane-data" aria-selected="false" tabindex="-1">data</button>
+  </div>
+
+  <!-- the very same controls that stand in the bar on a wide screen, moved here
+       rather than copied: a second set would be a second set of listeners and a
+       second thing to keep in step with the first. -->
+  <div class="pane" data-tab="passage" id="pane-passage" role="tabpanel" aria-labelledby="tab-passage" tabindex="0" hidden>
+    <div class="dsec">
+      <h3>What to type</h3>
+      <div class="mhost" id="mobileBarHost"></div>
+    </div>
   </div>
 
   <div class="pane" data-tab="bookmarks" id="pane-bookmarks" role="tabpanel" aria-labelledby="tab-bookmarks" tabindex="0">
@@ -1192,7 +1355,11 @@ function sizeWrap(){
   /* fill about 40% of the viewport with whole lines (3-6 of them); the grid
      starts a hair below 0 because raised verse numbers poke above the first
      line, so clip exactly at the last line's bottom, never mid-line */
-  const lines = Math.min(6, Math.max(3, Math.floor(window.innerHeight * 0.42 / lineH)));
+  /* the visual viewport, not the window. On iOS window.innerHeight does not
+     change when the keyboard comes up, so a passage sized from it went on
+     claiming 42% of the whole screen and most of that was behind the keys */
+  const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+  const lines = Math.min(6, Math.max(3, Math.floor(vh * 0.42 / lineH)));
   const base = chars.length ? chars[0].el.offsetTop : 0;
   els.wrap.style.maxHeight = (base + lineH * lines) + 'px';
 }
@@ -1209,9 +1376,43 @@ function placeCaret(){
   els.caret.style.left = (left - 1) + 'px';
   els.caret.style.top = (top - shift + lineH*0.16) + 'px';
   els.caret.style.height = (lineH*0.68) + 'px';
+  placeGhost(left, top - shift, t);
   els.caret.classList.add('moving');
   clearTimeout(caretIdleTimer);
   caretIdleTimer = setTimeout(()=> els.caret.classList.remove('moving'), 400);
+}
+
+/* ---------- the field follows the caret ----------
+   A phone decides for itself where to scroll when its keyboard comes up: it puts
+   the focused element in view and lets the rest of the page fall where it may.
+   The only way to make that reflex helpful is to keep the focused element on the
+   word being written, so it is moved with the caret, given the width of the word
+   it sits on so that it is a real target and not a hairline, and then asked to
+   stay in the half of the screen the keyboard has left us. */
+let lastGhostLine = -1;
+function placeGhost(left, top, charEl){
+  if (!els.ghost) return;
+  const word = charEl.parentElement;
+  const w = word ? word.offsetWidth : 0;
+  els.ghost.style.left = Math.max(0, left) + 'px';
+  els.ghost.style.top = top + 'px';
+  els.ghost.style.width = Math.max(lineH, w) + 'px';
+  els.ghost.style.height = lineH + 'px';
+  /* only when the writing has moved to another line, or this would fight the
+     reader for the scroll position on every single keystroke */
+  const line = Math.round(top / lineH);
+  if (line !== lastGhostLine){ lastGhostLine = line; keepFieldInView(); }
+}
+
+function keepFieldInView(){
+  const vv = window.visualViewport;
+  if (!vv) return;
+  /* nothing to do while the whole page fits in what is left of the screen */
+  if (document.documentElement.scrollHeight <= vv.height + 4) return;
+  const r = els.ghost.getBoundingClientRect();
+  if (r.top > vv.height * 0.5 || r.bottom > vv.height){
+    els.ghost.scrollIntoView({block:'center', behavior:'auto'});
+  }
 }
 
 /* ============================== typing ============================== */
@@ -1320,6 +1521,13 @@ function renderHints(){
   /* the editor answers to its own buttons; naming the typing shortcuts under it
      would be pointing at keys that do nothing */
   if ($('customPanel') && $('customPanel').classList.contains('show')){
+    $('hints').innerHTML = '';
+    return;
+  }
+  /* and naming them to a reader who has no keyboard at all is the same mistake
+     one step further out. A phone is given the two instructions it can actually
+     follow: the arrows in the bar and the button under the passage. */
+  if (NARROW.matches && matchMedia('(pointer: coarse)').matches){
     $('hints').innerHTML = '';
     return;
   }
@@ -4456,9 +4664,12 @@ function sanitizeMemory(m){
    rather than four sections stacked down a single scroll. Which tab was last
    open is remembered: someone setting up a key comes back to the key, not to
    the top of their bookmarks. */
-const DESK_TABS = ['bookmarks', 'memory', 'scribe', 'sources', 'data'];
+const DESK_TABS = ['passage', 'bookmarks', 'memory', 'scribe', 'sources', 'data'];
 function showTab(name){
   if (DESK_TABS.indexOf(name) < 0) name = 'bookmarks';
+  /* on a wide screen those controls are standing in the bar where they belong,
+     and the tab that would hold them is not there to be opened */
+  if (name === 'passage' && !NARROW.matches) name = 'bookmarks';
   store.settings.deskTab = name; save();
   els.drawer.querySelectorAll('[role="tab"]').forEach(b => {
     const on = b.dataset.tab === name;
@@ -4472,6 +4683,40 @@ function showTab(name){
   if (name === 'memory') renderMemoryPane();
   if (name === 'sources') renderStoredText();
 }
+/* ---------- the bar, on a screen that has no room for it ----------
+   Six sources, five verse counts, a reference field, a translation list, two
+   arrows and the desk, in a row set at eleven pixels: on a desk that is a line
+   of type, and on a phone it is a row of targets too small to hit and too many
+   to read. Below the breakpoint the settings go where there is room for them,
+   into a pane of the desk, and the bar keeps only what a reader reaches for
+   mid-passage: the way back, the recall in progress, and the desk itself.
+
+   They are moved, not duplicated. Every one of these controls already has its
+   listeners and its state written into it, and moving a node carries all of
+   that with it; a second copy would be a second thing to keep in step, and the
+   two would drift the first time either was touched. */
+const NARROW = window.matchMedia('(max-width: 768px)');
+let barHome = null;
+function applyBarPlacement(){
+  const host = $('mobileBarHost');
+  const narrow = NARROW.matches;
+  if (barHome === null){
+    barHome = [...document.querySelectorAll('.bar [data-sheet]')]
+      .map(el => ({el, parent: el.parentNode, next: el.nextSibling}));
+  }
+  for (const g of barHome){
+    const wanted = narrow ? host : g.parent;
+    if (g.el.parentNode === wanted) continue;
+    if (narrow) host.appendChild(g.el);
+    else g.parent.insertBefore(g.el, g.next);
+  }
+  $('tab-passage').hidden = !narrow;
+  /* a desk left open on the passage tab while the screen widened would be left
+     looking at an empty pane */
+  if (!narrow && store.settings.deskTab === 'passage') showTab('bookmarks');
+}
+NARROW.addEventListener('change', applyBarPlacement);
+
 function focusTab(name){
   const b = els.drawer.querySelector('[role="tab"][data-tab="' + name + '"]');
   if (b) b.focus();
@@ -4479,16 +4724,19 @@ function focusTab(name){
 els.drawer.querySelectorAll('[role="tab"]').forEach(b => {
   b.addEventListener('click', ()=>{ showTab(b.dataset.tab); focusTab(b.dataset.tab); });
   b.addEventListener('keydown', e=>{
-    const i = DESK_TABS.indexOf(b.dataset.tab);
+    /* the strip as it actually stands: the passage tab is only in it on a narrow
+       screen, and an arrow key must not walk onto a tab that isn't there */
+    const tabs = DESK_TABS.filter(t => !$('tab-' + t).hidden);
+    const i = tabs.indexOf(b.dataset.tab);
     let j = null;
-    if (e.key === 'ArrowRight') j = (i + 1) % DESK_TABS.length;
-    else if (e.key === 'ArrowLeft') j = (i - 1 + DESK_TABS.length) % DESK_TABS.length;
+    if (e.key === 'ArrowRight') j = (i + 1) % tabs.length;
+    else if (e.key === 'ArrowLeft') j = (i - 1 + tabs.length) % tabs.length;
     else if (e.key === 'Home') j = 0;
-    else if (e.key === 'End') j = DESK_TABS.length - 1;
+    else if (e.key === 'End') j = tabs.length - 1;
     if (j == null) return;
     /* stopped here so the drawer's own escape-only handler never sees it */
     e.preventDefault(); e.stopPropagation();
-    showTab(DESK_TABS[j]); focusTab(DESK_TABS[j]);
+    showTab(tabs[j]); focusTab(tabs[j]);
   });
 });
 
@@ -4572,6 +4820,8 @@ function syncBar(){
   els.countGrp.querySelectorAll('button').forEach(b =>
     b.classList.toggle('on', +b.dataset.count === s.count));
   els.translation.value = s.translation;
+  /* the phone's one button says which mode it would be opening onto */
+  $('sheetMode').textContent = s.mode === 'memorise' ? 'recall' : s.mode;
   /* the progress line belongs to scribe mode alone, and is hung off syncBar so
      it tracks every mode change, including the ones that never reach a render
      (switching to passage mode just focuses the input and waits) */
@@ -4586,6 +4836,12 @@ function setMode(m){
   store.settings.mode = m; save(); syncBar();
   if (m === 'passage'){ els.refInput.value = store.settings.passageRef || ''; els.refInput.focus(); }
   else newTest();
+  /* on a phone these buttons are in the desk rather than on the bar, and a mode
+     chosen there is usually the whole errand: the desk stands aside and leaves
+     the reader looking at the passage. The two that are not the whole errand
+     stay put, because each wants something typed into the pane next to it. */
+  if (NARROW.matches && m !== 'passage' && m !== 'custom' &&
+      els.drawer.classList.contains('open')) closeDrawer();
 }
 $('mDaily').addEventListener('click', ()=> setMode('daily'));
 $('mRandom').addEventListener('click', ()=> setMode('random'));
@@ -5098,12 +5354,30 @@ $('impFile').addEventListener('change', async ()=>{
 
 /* ============================== input plumbing ============================== */
 const SENTINEL = '·';
-function focusGhost(){ els.ghost.value = SENTINEL; els.ghost.focus({preventScroll:true}); }
+/* what the field was last seen holding, so that what a phone does to it can be
+   worked out by comparison */
+let lastVal = SENTINEL;
+function armField(){ els.ghost.value = SENTINEL; lastVal = SENTINEL; }
+function focusGhost(){
+  armField();
+  /* preventScroll keeps our own call from jumping the page; the browser's
+     keyboard-avoidance scroll happens anyway, and the field sits on the caret
+     now so that one lands on the passage */
+  els.ghost.focus({preventScroll:true});
+  els.ghost.setSelectionRange(els.ghost.value.length, els.ghost.value.length);
+}
 /* the typing field is where focus belongs after any load, but not while the
    drawer is open, or jumping the quill from there would yank focus out of it */
 function reclaimFocus(){ if (!els.drawer.classList.contains('open')) focusGhost(); }
 
-els.wrap.addEventListener('mousedown', e=>{ e.preventDefault(); focusGhost(); });
+/* a click, not a mousedown. mousedown with its default prevented is a way of
+   saying "take focus without moving the text cursor", which is right on a desk
+   and wrong on a phone: a touch that never becomes a click is a touch that
+   never brings up the keyboard, and preventing the default was enough to make
+   some browsers withhold it. One click handler answers a mouse and a finger
+   alike, and the field underneath takes no pointer events, so the tap always
+   arrives here. */
+els.wrap.addEventListener('click', ()=> focusGhost());
 els.veil.addEventListener('click', focusGhost);
 els.ghost.addEventListener('focus', ()=> els.veil.classList.remove('show'));
 els.ghost.addEventListener('blur', ()=>{
@@ -5154,18 +5428,51 @@ els.ghost.addEventListener('beforeinput', e=>{
 });
 
 els.ghost.addEventListener('keydown', e=>{
-  if (e.key === 'Backspace'){ e.preventDefault(); onBackspace(e.ctrlKey || e.altKey || e.metaKey); els.ghost.value = SENTINEL; return; }
+  if (e.key === 'Backspace'){ e.preventDefault(); onBackspace(e.ctrlKey || e.altKey || e.metaKey); armField(); return; }
+  /* the field is a textarea now, for the sake of the phones, and a textarea
+     takes a return as a line of its own. Scripture is typed in one run here,
+     so the key is simply refused rather than left to arrive as a character the
+     passage never asked for */
+  if (e.key === 'Enter'){ e.preventDefault(); return; }
   if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey){
-    e.preventDefault(); onChar(e.key); els.ghost.value = SENTINEL;
+    e.preventDefault(); onChar(e.key); armField();
   }
 });
-/* mobile soft keyboards: diff against the sentinel */
-els.ghost.addEventListener('input', ()=>{
+/* mobile soft keyboards: diff against the sentinel. A phone rarely sends a
+   keystroke at all - a swiped or predicted word arrives as a lump of text, and
+   a backspace at the start of one arrives as nothing - so what the field holds
+   is compared with what it was given and the difference is typed for real.
+   The sentinel is why: a field that empties itself is a field some keyboards
+   stop reporting backspaces from. */
+function syncFromField(){
   const v = els.ghost.value;
-  if (v.length > 1){ for (const c of v.slice(1)) onChar(c); }
-  else if (v.length === 0){ onBackspace(false); }
-  els.ghost.value = SENTINEL;
+  if (v === lastVal) return;
+  /* how much of what was there is still there. Everything past that point was
+     taken back, and everything past it in the new value was put there */
+  let i = 0; const n = Math.min(v.length, lastVal.length);
+  while (i < n && v[i] === lastVal[i]) i++;
+  for (let k = lastVal.length; k > i; k--) onBackspace(false);
+  for (let k = i; k < v.length; k++){
+    const c = v[k];
+    if (c !== '\n' && c !== '\r') onChar(c);
+  }
+  lastVal = v;
+}
+els.ghost.addEventListener('input', e=>{
+  syncFromField();
+  /* mid-composition the field has to keep holding the word being composed, or
+     the keyboard loses the thread of what it is proposing. It is emptied back
+     to the sentinel the moment the word is settled. */
+  if (!e.isComposing) armField();
 });
+/* an Android keyboard predicting a word, or any IME, rewrites what it has
+   already put in the field rather than adding to it. Compared rather than
+   counted, a rewrite reads as a few letters taken back and a few put down,
+   which is exactly what it is, and the run stays honest. compositionupdate is
+   deliberately not listened for: it arrives before the field has been
+   rewritten, so there would be nothing yet to compare against. The input event
+   fires during composition as well, and by then there is. */
+els.ghost.addEventListener('compositionend', ()=>{ syncFromField(); armField(); });
 
 /* ---------- escape ----------
    restart has to answer wherever the reader is standing. It used to be handled
@@ -5188,8 +5495,17 @@ window.addEventListener('keydown', e=>{
   /* one press, one job: put the suggestion list away if it is open, and
      otherwise restart the passage on screen */
   if (!$('refSuggest').hidden && sugRows.length){ closeSuggest(); return; }
-  showTyping(); resetRun(); focusGhost();
+  restartPassage();
 }, true);
+
+function restartPassage(){ showTyping(); resetRun(); focusGhost(); }
+/* one tap from the bar to the settings themselves, rather than making a reader
+   find them behind a button called "desk" and guess which of six sections they
+   were filed under */
+$('sheetBtn').addEventListener('click', ()=> openDrawer('passage'));
+/* the same instruction, for a screen that is tapped. It is shown only where
+   there is no escape key to press (see #restartBtn in the stylesheet) */
+$('restartBtn').addEventListener('click', restartPassage);
 
 window.addEventListener('keydown', e=>{
   /* the drawer is a modal surface: while it is open, nothing behind it should
@@ -5247,10 +5563,36 @@ window.addEventListener('keydown', e=>{
 });
 
 let resizeT = null;
-window.addEventListener('resize', ()=>{
+function relayout(){
   clearTimeout(resizeT);
-  resizeT = setTimeout(()=>{ sizeWrap(); placeCaret(); }, 120);
-});
+  resizeT = setTimeout(()=>{ sizeWrap(); placeCaret(); keepFieldInView(); }, 120);
+}
+window.addEventListener('resize', relayout);
+
+/* ---------- the keyboard ----------
+   A soft keyboard is not a resize. The window keeps its height and the layout
+   viewport keeps its own, and only the visual viewport knows that half the
+   screen has just been taken away; a page told nothing of it goes on drawing
+   the passage where the keys now are. So the shelf is re-cut whenever the
+   visual viewport changes, and while the keyboard is up the masthead and the
+   control bar give up their room to the passage, which is what the reader came
+   for. The threshold is generous on purpose: an address bar sliding away is a
+   change of a few dozen pixels and must not read as a keyboard. */
+if (window.visualViewport){
+  const vv = window.visualViewport;
+  const keyboardShift = ()=>{
+    const hidden = window.innerHeight - vv.height;
+    document.body.classList.toggle('kbd-open', hidden > 120);
+    relayout();
+  };
+  vv.addEventListener('resize', keyboardShift);
+  vv.addEventListener('scroll', ()=>{ clearTimeout(resizeT); resizeT = setTimeout(keepFieldInView, 120); });
+}
+
+/* a focused field inside the clipped shelf tempts the browser to scroll the
+   shelf itself, which would slide the passage out from under the caret while
+   the transform on #text knows nothing about it. The shelf does not scroll. */
+els.wrap.addEventListener('scroll', ()=>{ els.wrap.scrollTop = 0; els.wrap.scrollLeft = 0; });
 
 /* the webfont can land after the first caret placement and reflow the text */
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ sizeWrap(); placeCaret(); });
@@ -5267,6 +5609,7 @@ if (store.settings.mode === 'memorise' && !memCount()){
   store.settings.memFrom = '';
 }
 syncBar();
+applyBarPlacement();
 renderAttribution(null, false);
 renderPins();
 renderScribe();
