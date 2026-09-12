@@ -2811,7 +2811,6 @@ els.refInput.addEventListener('keydown', e=>{
     }
     e.preventDefault(); e.stopPropagation(); return;
   }
-  if (e.key === 'Escape' && open){ closeSuggest(); e.preventDefault(); e.stopPropagation(); return; }
   if (e.key === 'Enter'){
     e.preventDefault();
     if (open && sugSel >= 0) applySuggest(sugSel);
@@ -3195,6 +3194,30 @@ els.ghost.addEventListener('input', ()=>{
   els.ghost.value = SENTINEL;
 });
 
+/* ---------- escape ----------
+   restart has to answer wherever the reader is standing. It used to be handled
+   alongside the other shortcuts, which meant it arrived last: every control
+   that keeps its own keys had already swallowed it, so escape pressed with the
+   translation menu or the reference field in hand did nothing at all, however
+   many times it was pressed — the passage could only be restarted by clicking
+   back into it first. It is taken in the capture phase now, ahead of all of
+   them, and it puts focus back in the typing field itself rather than leaving
+   it parked on whatever was last clicked. */
+window.addEventListener('keydown', e=>{
+  if (e.key !== 'Escape') return;
+  /* the two surfaces where escape already means something more particular are
+     left to answer for themselves: the desk closes (below, after the fields
+     inside it have had their chance to cancel an edit of their own), and the
+     editor keeps every key, so escape can never throw away unsaved writing */
+  if (els.drawer.classList.contains('open')) return;
+  if ($('customPanel').contains(e.target)) return;
+  e.preventDefault(); e.stopPropagation();
+  /* one press, one job: put the suggestion list away if it is open, and
+     otherwise restart the passage on screen */
+  if (!$('refSuggest').hidden && sugRows.length){ closeSuggest(); return; }
+  showTyping(); resetRun(); focusGhost();
+}, true);
+
 window.addEventListener('keydown', e=>{
   /* the drawer is a modal surface: while it is open, nothing behind it should
      answer the keyboard. Re-rendering a pin row destroys the button holding
@@ -3209,7 +3232,7 @@ window.addEventListener('keydown', e=>{
     /* A included so a focused footer link still activates on enter instead of
        being swallowed (and preventDefault'd) by the repeat shortcut */
     if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || tag === 'A') return;
-    if (tag === 'BUTTON' && e.key !== 'Escape') return;
+    if (tag === 'BUTTON') return;
   }
   if (e.key === 'Tab' && e.shiftKey){ e.preventDefault(); goTrail(-1); return; }
   if (e.key === 'Tab'){
@@ -3229,9 +3252,6 @@ window.addEventListener('keydown', e=>{
      repeat yet (esc restarts instead), and before the first keystroke
      "again" is a lie — it used to fire here and silently redraw the text */
   if (e.key === 'Enter' && finished){ e.preventDefault(); repeatTest(); return; }
-  if (e.key === 'Escape'){
-    e.preventDefault(); showTyping(); resetRun(); focusGhost(); return;
-  }
   /* any key takes focus, and the keystroke still counts. It used to only move
      focus, which quietly ate the first letter of anyone who just started
      typing — the one case this branch exists to serve. */
